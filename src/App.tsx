@@ -75,6 +75,11 @@ export default function Layout() {
 			setLCUChallengeData(x as LCUChallengeData);
 		});
 
+		// backup in case of non-na user (temporary)
+		// invoke("lcu_get_request", { url: "/lol-champion-mastery/v1/local-player/champion-mastery" }).then(x => {
+		// 	setMasteryData(x as MasteryData);
+		// });
+
 		invoke("lcu_get_request", { url: "/lol-summoner/v1/current-summoner" }).then(x => {
 			const summoner_data = x as SummonerData;
 			setRiotId([summoner_data.gameName, summoner_data.tagLine]);

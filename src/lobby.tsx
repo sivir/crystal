@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ChampionSummaryItem, LCUChallengeData, MasteryData, RiotChallengeData } from "@/lib/types.ts";
 import { Button } from "@/components/ui/button.tsx";
-import { RefreshCw } from "lucide-react";
+import { Check, RefreshCw, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 function is_globe_or_harmony(challenge: any) {
@@ -135,6 +135,7 @@ export default function Lobby({ lobby, supabase, lcu_challenge_data, champion_ma
 						<tr>
 							<th className="p-3 text-left">Champion</th>
 							<th className="p-3 text-left" colSpan={2}>Mastery</th>
+							<th className="p-3 text-left">s-</th>
 							<th className="p-3 w-20"></th>
 						</tr>
 						</thead>
@@ -158,6 +159,9 @@ export default function Lobby({ lobby, supabase, lcu_challenge_data, champion_ma
 								</td>
 								<td className="p-3 pl-2">
 									<span className="font-semibold">{mastery_data.find(champion => champion.championId === champ.champion_id)?.championPoints ?? 0}</span>
+								</td>
+								<td className="p-3">
+									<span className="font-semibold">{lcu_challenge_data[101301].completedIds.includes(champ.champion_id) ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}</span>
 								</td>
 								<td className="p-3">
 									<Button
