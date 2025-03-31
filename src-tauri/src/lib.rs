@@ -1,145 +1,164 @@
-use irelia::{Error, RequestClient, rest::LcuClient};
-use irelia::ws::types::{Event, EventKind};
-use irelia::ws::{LcuWebSocket, Subscriber};
-use serde_json::Value;
-use tauri::{AppHandle, Emitter};
+use std::{sync::Arc, thread, time::Duration};
+use tauri::{menu::{Menu, MenuItem}, tray::TrayIconBuilder, AppHandle, Emitter, Manager, State};
+use irelia::{ws::LcuWebSocket, rest::LcuClient};
+use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
+use serde_derive::{Deserialize, Serialize};
 
 pub struct Data {
-	pub request_client: RequestClient,
-	pub lcu_client: LcuClient,
-	pub ws_client: LcuWebSocket,
+	pub lcu_client: Option<LcuClient>,
+	pub ws_client: Option<LcuWebSocket>,
+	pub connected: bool,
+}
+//
+// struct GameflowEventHandler {
+// 	app_handle: AppHandle,
+// 	gameflow: String
+// }
+
+impl Data {
+	fn new() -> Self {
+		Self {
+			lcu_client: None,
+			ws_client: None,
+			connected: false,
+		}
+	}
+
+	fn connect(&mut self) -> Result<(), irelia::Error> {
+		match LcuClient::connect() {
+			Ok(client) => {
+				self.lcu_client = Some(client);
+				self.ws_client = Some(LcuWebSocket::new());
+				Ok(())
+			}
+			Err(e) => Err(e),
+		}
+	}
 }
 
-type TauriState<'a> = tauri::State<'a, Mutex<Data>>;
+#[tauri::command]
+async fn lcu_get_request(state: State<'_, Arc<Mutex<Data>>>, path: String) -> Result<serde_json::Value, String> {
+	let state = state.lock().await;
+	
+	match &state.lcu_client {
+		Some(client) => client.get(&path).await.map_err(|e| e.to_string()),
+		None => Err("Not connected to League client".to_string())
+	}
+}
 
 #[tauri::command]
-async fn http_request(url: &str) -> Result<Value, String> {
+async fn http_request(url: String) -> Result<serde_json::Value, String> {
 	let response = reqwest::get(url).await.map_err(|e| e.to_string())?;
 	let json = response.json().await.map_err(|e| e.to_string())?;
 	Ok(json)
 }
 
-#[tauri::command]
-async fn lcu_help(state: TauriState<'_>) -> Result<Value, String> {
-	let data = state.lock().await;
-	let lcu_client = &data.lcu_client;
-	let request_client = &data.request_client;
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RerollPoints {
+	pub current_points: i64,
+	pub max_rolls: i64,
+	pub number_of_rolls: i64,
+	pub points_cost_to_roll: i64,
+	pub points_to_reroll: i64,
+}
 
-	let json: Result<Option<Value>, Error> = lcu_client.get("/help", request_client).await;
-	match json {
-		Ok(Some(json)) => Ok(json),
-		_ => Ok(Value::Null),
-	}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentSummoner {
+	pub account_id: i64,
+	pub display_name: String,
+	pub game_name: String,
+	pub internal_name: String,
+	pub name_change_flag: bool,
+	pub percent_complete_for_next_level: i64,
+	pub privacy: String,
+	pub profile_icon_id: i64,
+	pub puuid: String,
+	pub reroll_points: RerollPoints,
+	pub summoner_id: i64,
+	pub summoner_level: i64,
+	pub tag_line: String,
+	pub unnamed: bool,
+	pub xp_since_last_level: i64,
+	pub xp_until_next_level: i64,
 }
 
 #[tauri::command]
-async fn lcu_get_request(state: TauriState<'_>, url: String) -> Result<Value, String> {
-	let data = state.lock().await;
-	let lcu_client = &data.lcu_client;
-	let request_client = &data.request_client;
-
-	let json: Result<Value, Error> = lcu_client.get(&url, request_client).await;
-	match json {
-		Ok(json) => Ok(json),
-		_ => Ok(Value::Null),
-	}
-}
-
-#[tauri::command]
-async fn lcu_put_request(state: TauriState<'_>, url: String, body: Value) -> Result<Value, String> {
-	let data = state.lock().await;
-	let lcu_client = &data.lcu_client;
-	let request_client = &data.request_client;
-
-	let json: Result<Value, Error> = lcu_client.put(&url, body, request_client).await;
-	match json {
-		Ok(json) => Ok(json),
-		_ => Ok(Value::Null),
-	}
-}
-
-#[tauri::command]
-async fn lcu_post_request(state: TauriState<'_>, url: String, body: Value) -> Result<Value, String> {
-	let data = state.lock().await;
-	let lcu_client = &data.lcu_client;
-	let request_client = &data.request_client;
-
-	let json: Result<Value, Error> = lcu_client.post(&url, body, request_client).await;
-	match json {
-		Ok(json) => Ok(json),
-		_ => Ok(Value::Null),
-	}
-}
-
-static mut WS_INITIALIZED: bool = false;
-
-#[tauri::command]
-async fn ws_init(state: TauriState<'_>, app_handle: AppHandle) -> Result<(), String> {
-	println!("ws_init");
-	unsafe {
-		if WS_INITIALIZED {
-			return Ok(());
-		}
-		WS_INITIALIZED = true;
-	}
-	println!("started");
-	let mut data = state.lock().await;
-	let ws_client = &mut data.ws_client;
-
-	struct LobbyEventHandler {
-		app_handle: AppHandle,
-		lobby_members: Vec<String>,
-	}
-
-	impl Subscriber for LobbyEventHandler {
-		fn on_event(&mut self, event: &Event, _: &mut bool) {
-			if event.2.uri == "/lol-lobby/v2/lobby/members" {
-				self.lobby_members = event.2.data.as_array().unwrap().iter().map(|x| x["puuid"].as_str().unwrap().to_string()).collect();
-				println!("{:?}", self.lobby_members);
-				self.app_handle.emit("lobby", self.lobby_members.clone()).unwrap();
-			}
-			if event.2.event_type == "Delete" {
-				self.lobby_members.clear();
-				self.app_handle.emit("lobby", self.lobby_members.clone()).unwrap();
-			}
-		}
-	}
-
-	struct GameflowEventHandler {
-		app_handle: AppHandle
-	}
-
-	impl Subscriber for GameflowEventHandler {
-		fn on_event(&mut self, event: &Event, _: &mut bool) {
-			self.app_handle.emit("gameflow", event.2.data.clone()).unwrap();
-		}
-	}
-
-	struct EventHandler;
-	impl Subscriber for EventHandler {
-		fn on_event(&mut self, event: &Event, _: &mut bool) {
-			println!("{:?}", event);
-		}
-	}
-
-	//ws_client.subscribe(EventKind::JsonApiEventCallback("/lol-gameflow/v1/session".to_string()), EventHandler).unwrap();
-	ws_client.subscribe(EventKind::JsonApiEventCallback("/lol-gameflow/v1/gameflow-phase".to_string()), GameflowEventHandler { app_handle: app_handle.clone() }).unwrap();
-	ws_client.subscribe(EventKind::JsonApiEventCallback("/lol-lobby/v2/lobby".to_string()), LobbyEventHandler { app_handle: app_handle.clone(), lobby_members: Vec::new() }).unwrap();
-
-	Ok(())
+async fn get_connected(state: State<'_, Arc<Mutex<Data>>>) -> Result<bool, String> {
+	Ok(state.lock().await.connected)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 	tauri::Builder::default()
-		.manage(Mutex::new(Data {
-			request_client: RequestClient::new(),
-			lcu_client: LcuClient::new(false).unwrap(),
-			ws_client: LcuWebSocket::new(),
-		}))
-		.plugin(tauri_plugin_shell::init())
-		.invoke_handler(tauri::generate_handler![lcu_help, ws_init, lcu_get_request, lcu_put_request, lcu_post_request, http_request])
+		.setup(|app| {
+			let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+			let show_i = MenuItem::with_id(app, "show", "Show/Hide", true, None::<&str>)?;
+			let menu = Menu::with_items(app, &[&quit_i, &show_i])?;
+
+			TrayIconBuilder::new()
+				.on_menu_event(|app, event| match event.id.as_ref() {
+					"quit" => {
+						println!("quit menu item was clicked");
+						app.exit(0);
+					}
+					"show" => {
+						let main_window = app.get_window("main").unwrap();
+						main_window.show().unwrap();
+					}
+					_ => {
+						println!("menu item {:?} not handled", event.id);
+					}
+				})
+				.menu(&menu)
+				.show_menu_on_left_click(false)
+				.icon(app.default_window_icon().unwrap().clone())
+				.build(app)?;
+
+			let state = Arc::new(Mutex::new(Data::new()));
+			app.manage(state.clone());
+
+			let thread_state = state.clone();
+			let app_handle = app.app_handle().clone();
+			let rt = Runtime::new().unwrap();
+			thread::spawn(move || {
+				rt.block_on(async {
+					loop {
+						let mut state = thread_state.lock().await;
+
+						if !state.connected {
+							match state.connect() {
+								Ok(()) => {
+									println!("Successfully connected to League client");
+									state.connected = true;
+									app_handle.emit("connection", true).unwrap();
+								},
+								Err(e) => println!("{}", e),
+							}
+						} else {
+							if let Some(client) = &state.lcu_client {
+								if let Err(_) = client.get::<CurrentSummoner>("/lol-summoner/v1/current-summoner").await {
+									println!("Lost connection to League client");
+									state.connected = false;
+									state.lcu_client = None;
+									state.ws_client = None;
+									app_handle.emit("connection", false).unwrap();
+								}
+							}
+						}
+
+						drop(state);
+						tokio::time::sleep(Duration::from_secs(5)).await;
+					}
+				});
+			});
+
+			Ok(())
+		})
+		.plugin(tauri_plugin_opener::init())
+		.invoke_handler(tauri::generate_handler![lcu_get_request, get_connected, http_request])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");
 }
