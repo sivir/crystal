@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDown, ArrowUp, ChevronDown, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bar, BarChart, Label, LabelList, ReferenceArea, ReferenceLine, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, Text, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useEffect, useMemo, useState } from "react";
 import { MasteryDataEntry, useData } from "@/data_context.tsx";
@@ -37,16 +37,16 @@ const default_mastery_data: MasteryDataEntry = {
 		requireGradeCounts: {}
 	},
 	tokensEarned: 0
-}
+};
 
-const mastery_colors: {[key: number]: string} = {
+const mastery_colors: { [key: number]: string } = {
 	10: "bg-red-500 hover:bg-red-600 text-white border-transparent",
 	9: "bg-orange-500 hover:bg-orange-600 text-white border-transparent",
 	8: "bg-purple-500 hover:bg-purple-600 text-white border-transparent",
 	7: "bg-blue-500 hover:bg-blue-600 text-white border-transparent",
 	6: "bg-green-500 hover:bg-green-600 text-white border-transparent",
-	5: "bg-gray-500 hover:bg-gray-600 text-white border-transparent",
-}
+	5: "bg-gray-500 hover:bg-gray-600 text-white border-transparent"
+};
 
 function mastery_color(level: number): string {
 	if (level >= 10) {
@@ -57,7 +57,7 @@ function mastery_color(level: number): string {
 
 export default function Champions() {
 	const { data } = useData();
-	const [mastery_chart_data, set_mastery_chart_data] = useState<any[]>([]);
+	// const [mastery_chart_data, set_mastery_chart_data] = useState<any[]>([]);
 	const [champion_table_data, set_champion_table_data] = useState<ChampionTableRow[]>([]);
 	const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 	const [selected_roles, set_selected_roles] = useState<string[]>([]);
@@ -75,7 +75,7 @@ export default function Champions() {
 				mastery_points: current_mastery_data.championPoints,
 				icon_url: champion.squarePortraitPath,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
-				points_until_next_level: current_mastery_data.championPointsUntilNextLevel,
+				points_until_next_level: current_mastery_data.championPointsUntilNextLevel
 			};
 		}));
 	}, [data.champion_map, data.mastery_data, data.lcu_data]);
@@ -109,22 +109,22 @@ export default function Champions() {
 		if (Object.keys(data.lcu_data).length === 0) {
 			return;
 		}
-		set_mastery_chart_data(classes.map((c, i) => ({
-			class: c,
-			m7: data.lcu_data[m7_challenges[i]].currentValue,
-			m10: data.lcu_data[m10_challenges[i]].currentValue,
-			m7_max: data.lcu_data[m7_challenges[i]].thresholds["MASTER"].value,
-			m10_max: data.lcu_data[m10_challenges[i]].thresholds["MASTER"].value,
-			m7_percent: data.lcu_data[m7_challenges[i]].currentValue / data.lcu_data[m7_challenges[i]].thresholds["MASTER"].value * 100,
-			m10_percent: data.lcu_data[m10_challenges[i]].currentValue / data.lcu_data[m10_challenges[i]].thresholds["MASTER"].value * 100
-		})));
+		// set_mastery_chart_data(classes.map((c, i) => ({
+		// 	class: c,
+		// 	m7: data.lcu_data[m7_challenges[i]].currentValue,
+		// 	m10: data.lcu_data[m10_challenges[i]].currentValue,
+		// 	m7_max: data.lcu_data[m7_challenges[i]].thresholds["MASTER"].value,
+		// 	m10_max: data.lcu_data[m10_challenges[i]].thresholds["MASTER"].value,
+		// 	m7_percent: data.lcu_data[m7_challenges[i]].currentValue / data.lcu_data[m7_challenges[i]].thresholds["MASTER"].value * 100,
+		// 	m10_percent: data.lcu_data[m10_challenges[i]].currentValue / data.lcu_data[m10_challenges[i]].thresholds["MASTER"].value * 100
+		// })));
 	}, [data.lcu_data]);
 
 	const filteredData = useMemo(() => {
 		return sorted_table_data.filter(item => {
 			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.includes(role));
 			const nameMatch = search === '' || item.name.toLowerCase().includes(search.toLowerCase());
-			
+
 			return roleMatch && nameMatch;
 		});
 	}, [sorted_table_data, selected_roles, search]);
@@ -138,102 +138,101 @@ export default function Champions() {
 					</CardHeader>
 					<CardContent>
 						<ChartContainer config={{
-							m7: { label: "Mastery 7", color: "#2563eb" },
+							diff: { label: "Mastery 7", color: "#2563eb" },
 							m10: { label: "Mastery 10", color: "#60a5fa" }
 						}} className="min-h-[100px]">
-							<div className="flex flex-wrap gap-4 flex-row">
-							{classes.map((class_name, index) => {
-								if (Object.keys(data.lcu_data).length === 0) {
-									return <></>;
-								}
-
-								const m7_thresholds = Object.entries(data.lcu_data[m7_challenges[index]].thresholds).sort((a, b) => a[1].value - b[1].value).map(value => value[1].value);
-								const m10_thresholds = Object.entries(data.lcu_data[m10_challenges[index]].thresholds).sort((a, b) => a[1].value - b[1].value).map(value => value[1].value);
-								const m7_current = data.lcu_data[m7_challenges[index]].currentValue;
-								const m10_current = data.lcu_data[m10_challenges[index]].currentValue;
-								const m7_max = data.lcu_data[m7_challenges[index]].thresholds["MASTER"].value;
-								const m10_max = data.lcu_data[m10_challenges[index]].thresholds["MASTER"].value;
-
-								// Create chart data for this class
-								const chartData = [
-									{
-										name: "M7",
-										value: m7_current,
-										max: m7_max,
-										percent: (m7_current / m7_max) * 100,
-										color: "var(--color-m7)"
-									},
-									{
-										name: "M10",
-										value: m10_current,
-										max: m10_max,
-										percent: (m10_current / m10_max) * 100,
-										color: "var(--color-m10)"
+							<div className="flex flex-wrap">
+								{classes.map((class_name, index) => {
+									if (!data.has_lcu_data) {
+										return null;
 									}
-								];
 
-								return (
-									<BarChart
-										width={150}
-										height={150}
-										data={chartData}
-										margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-										barSize={20}
-									>
-										<XAxis dataKey="name" />
-										<YAxis hide domain={[0, 100]} />
-										<ChartTooltip
-											content={<ChartTooltipContent
-												labelKey="name"
-												indicator="line"
-												formatter={(value, name, item) => (
-													<div className="flex items-center justify-between gap-2">
-                      <span className="font-mono font-medium">
-                        {item.payload.value}/{item.payload.max}
-                      </span>
-													</div>
-												)}
-											/>}
-										/>
+									const m7_thresholds = Object.entries(data.lcu_data[m7_challenges[index]].thresholds).sort((a, b) => a[1].value - b[1].value).map(value => value[1].value);
+									const m10_thresholds = Object.entries(data.lcu_data[m10_challenges[index]].thresholds).sort((a, b) => a[1].value - b[1].value).map(value => value[1].value);
+									const m7_current = data.lcu_data[m7_challenges[index]].currentValue;
+									const m10_current = data.lcu_data[m10_challenges[index]].currentValue;
+									const m7_max = data.lcu_data[m7_challenges[index]].thresholds["MASTER"].value;
+									//const m10_max = data.lcu_data[m10_challenges[index]].thresholds["MASTER"].value;
 
-										{/* Threshold reference lines */}
-										{/*{name === "M7" ?*/}
-										{/*	m7_thresholds.map(([key, value]) => (*/}
-										{/*		<ReferenceLine*/}
-										{/*			key={`m7-${key}`}*/}
-										{/*			y={(value.value / m7_max) * 100}*/}
-										{/*			stroke="#888"*/}
-										{/*			strokeDasharray="3 3"*/}
-										{/*		>*/}
-										{/*			<Label value={value.value} position="right" fontSize={10} />*/}
-										{/*		</ReferenceLine>*/}
-										{/*	)) :*/}
-										{/*	m10_thresholds.map(([key, value]) => (*/}
-										{/*		<ReferenceLine*/}
-										{/*			key={`m10-${key}`}*/}
-										{/*			y={(value.value / m10_max) * 100}*/}
-										{/*			stroke="#888"*/}
-										{/*			strokeDasharray="3 3"*/}
-										{/*		>*/}
-										{/*			<Label value={value.value} position="right" fontSize={10} />*/}
-										{/*		</ReferenceLine>*/}
-										{/*	))*/}
-										{/*}*/}
+									const chart_data = [{
+										name: class_name,
+										m7: m7_current,
+										diff: m7_current - m10_current,
+										m10: m10_current
+									}];
 
-										<Bar
-											dataKey="percent"
-											fill={(entry) => entry.color}
-											radius={4}
-										>
-											<LabelList
-												dataKey="value"
-												position="top"
-												fontSize={10}
-											/>
-										</Bar>
-									</BarChart>
-								);
-							})}
+									for (let i = 0; i < m7_thresholds.length; i++) {
+										if (m7_thresholds[i] != m10_thresholds[i]) {
+											console.error("m7_thresholds and m10_thresholds are not equal");
+											break;
+										}
+									}
+
+									return (
+										<div className="flex-1 min-w-[70px] p-1" key={class_name}>
+											<ResponsiveContainer width="100%" height={250}>
+												<BarChart data={chart_data}>
+													<ChartTooltip
+														wrapperStyle={{ zIndex: 100 }}
+														content={
+															<ChartTooltipContent
+																formatter={(value, name, _item) => {
+																	const displayValue = name === "diff" ? m7_current : value;
+																	return <div className="flex items-center justify-between gap-2">
+																		<div className="flex items-center gap-2">
+																			<div
+																				className="h-2.5 w-1 shrink-0 rounded-[2px]"
+																				style={{
+																					backgroundColor: name === "diff" ? "#2563eb" : "#60a5fa"
+																				}}
+																			/>
+																			<span className="text-muted-foreground">
+																					{name === "diff" ? "Mastery 7" : "Mastery 10"}
+																				</span>
+																		</div>
+																		<span className="font-mono font-medium tabular-nums text-foreground">
+																				{displayValue}
+																			</span>
+																	</div>;
+																}}
+															/>
+														}
+													/>
+													<XAxis dataKey="name" />
+													<YAxis 
+														width={20} 
+														ticks={m7_thresholds.filter(value => value >= m10_current)} 
+														domain={[0, m7_max]} 
+														interval={0}
+														tick={(props) => {
+															const { payload } = props;
+
+															const colors = {
+																[m7_thresholds[0]]: "#51484a", // iron
+																[m7_thresholds[1]]: "#8c513a", // bronze
+																[m7_thresholds[2]]: "#80989d", // silver
+																[m7_thresholds[3]]: "#cd8837", // gold
+																[m7_thresholds[4]]: "#4e9996", // platinum
+																[m7_thresholds[5]]: "#576bce", // diamond
+																[m7_thresholds[6]]: "#9d48e0"  // master
+															};
+
+															props.stroke = colors[payload.value] || "#888888";
+															//props.strokeWidth = .5;
+															return (
+																<Text {...props}>
+																	{payload.value}
+																</Text>
+															);
+														}}
+													/>
+													<Bar dataKey="m10" stackId="a" fill="var(--color-m10)" />
+													<Bar dataKey="diff" stackId="a" fill="var(--color-diff)" />
+												</BarChart>
+											</ResponsiveContainer>
+										</div>
+									);
+								})}
 							</div>
 							{/*<BarChart data={mastery_chart_data}>*/}
 							{/*	<ChartTooltip*/}
@@ -326,9 +325,9 @@ export default function Champions() {
 				<div className="flex items-center gap-2 flex-wrap">
 					<div className="relative">
 						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-						<Input 
+						<Input
 							placeholder="Search Champions..."
-							className="pl-8 w-[200px]" 
+							className="pl-8 w-[200px]"
 							value={search}
 							onChange={(e) => set_search(e.target.value)}
 						/>
@@ -369,10 +368,10 @@ export default function Champions() {
 					</DropdownMenu>
 
 					<div className="flex items-center gap-1">
-						<Select 
+						<Select
 							onValueChange={(field) => {
 								set_sort_field(field as keyof ChampionTableRow);
-							}} 
+							}}
 							value={sort_field}
 						>
 							<SelectTrigger className="w-[160px]">

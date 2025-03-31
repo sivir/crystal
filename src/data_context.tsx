@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type page_name = "home" | "inbox" | "calendar" | "search" | "settings" | "debug";
 
@@ -29,7 +29,7 @@ export type ChampionSummaryMap = {
 	[id: number]: ChampionSummaryItem;
 }
 
-type LCUData = {
+export type LCUData = {
 	[id: number]: {
 		currentValue: number;
 		thresholds: {
@@ -47,6 +47,7 @@ export interface PageData {
 	champion_map: ChampionSummaryMap;
 	page: page_name;
 	connected: boolean;
+	has_lcu_data: boolean;
 }
 
 const initial_page_data: PageData = {
@@ -56,6 +57,7 @@ const initial_page_data: PageData = {
 	champion_map: {},
 	page: "home",
 	connected: false,
+	has_lcu_data: false,
 };
 
 const DataContext = createContext<{data: PageData, setData: React.Dispatch<React.SetStateAction<PageData>>}>({
@@ -65,6 +67,9 @@ const DataContext = createContext<{data: PageData, setData: React.Dispatch<React
 
 export function DataProvider({children}: {children: React.ReactNode}) {
 	const [data, setData] = useState<PageData>(initial_page_data);
+	useEffect(() => {
+		setData(prev => ({...prev, has_lcu_data: Object.keys(prev.lcu_data).length > 0}));
+	}, [data.lcu_data]);
 	return <DataContext.Provider value={{data, setData}}>{children}</DataContext.Provider>;
 }
 

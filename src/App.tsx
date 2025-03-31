@@ -1,7 +1,7 @@
 import React, { lazy, useEffect } from "react";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
-import { ChampionSummaryItem, MasteryDataEntry, useData } from "@/data_context.tsx";
+import { ChampionSummaryItem, LCUData, MasteryDataEntry, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { page_name, PageData } from "@/data_context.tsx";
 
@@ -18,7 +18,7 @@ const page_components: Record<page_name, React.ComponentType> = {
 }
 
 export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageData>>) {
-	invoke("lcu_get_request", {path: "/lol-challenges/v1/challenges/local-player"}).then(x => {
+	invoke<LCUData>("lcu_get_request", {path: "/lol-challenges/v1/challenges/local-player"}).then(x => {
 		console.log("/lol-challenges/v1/challenges/local-player", x);
 		setData(prev => ({...prev, lcu_data: x}));
 	});
@@ -30,13 +30,12 @@ export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageDa
 
 export default function App() {
 	const {data, setData} = useData();
-	const PageComponent : React.ComponentType = page_components[data.page];
+	const PageComponent = page_components[data.page];
 
 	useEffect(() => {
 		console.log("init");
 		refresh_data(setData);
 		invoke<boolean>("get_connected").then(x => {
-			console.log(x);
 			setData(prev => ({...prev, connected: x}));
 		});
 		invoke<ChampionSummaryItem[]>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-summary.json" }).then(x => {
