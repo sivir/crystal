@@ -38,11 +38,16 @@ impl Data {
 }
 
 #[tauri::command]
-async fn lcu_get_request(state: State<'_, Arc<Mutex<Data>>>, path: String) -> Result<serde_json::Value, String> {
+async fn lcu_request(state: State<'_, Arc<Mutex<Data>>>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
 	let state = state.lock().await;
 	
 	match &state.lcu_client {
-		Some(client) => client.get(&path).await.map_err(|e| e.to_string()),
+		Some(client) => match method.to_lowercase().as_str() {
+			"get" => client.get(&path).await.map_err(|e| e.to_string()),
+			"post" => client.post(&path, body.unwrap()).await.map_err(|e| e.to_string()),
+			"put" => client.put(&path, body.unwrap()).await.map_err(|e| e.to_string()),
+			_ => Err("Invalid method".to_string())
+		},
 		None => Err("Not connected to League client".to_string())
 	}
 }
@@ -158,7 +163,7 @@ pub fn run() {
 			Ok(())
 		})
 		.plugin(tauri_plugin_opener::init())
-		.invoke_handler(tauri::generate_handler![lcu_get_request, get_connected, http_request])
+		.invoke_handler(tauri::generate_handler![lcu_request, get_connected, http_request])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");
 }

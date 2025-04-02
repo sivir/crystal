@@ -1,12 +1,15 @@
-import React, { lazy, useEffect } from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
 import { ChampionSummaryItem, LCUData, MasteryDataEntry, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { page_name, PageData } from "@/data_context.tsx";
 
-const Champions = lazy(() => import("@/pages/champions.tsx"));
-const Debug = lazy(() => import("@/pages/debug.tsx"));
+import Champions from "@/pages/champions.tsx";
+import Debug from "@/pages/debug.tsx";
+
+// const Champions = lazy(() => import("@/pages/champions.tsx"));
+// const Debug = lazy(() => import("@/pages/debug.tsx"));
 
 const page_components: Record<page_name, React.ComponentType> = {
 	"home": Champions,
@@ -18,11 +21,11 @@ const page_components: Record<page_name, React.ComponentType> = {
 }
 
 export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageData>>) {
-	invoke<LCUData>("lcu_get_request", {path: "/lol-challenges/v1/challenges/local-player"}).then(x => {
+	invoke<LCUData>("lcu_request", {method: "get", path: "/lol-challenges/v1/challenges/local-player"}).then(x => {
 		console.log("/lol-challenges/v1/challenges/local-player", x);
 		setData(prev => ({...prev, lcu_data: x}));
 	});
-	invoke<MasteryDataEntry[]>("lcu_get_request", {path: "/lol-champion-mastery/v1/local-player/champion-mastery"}).then(x => {
+	invoke<MasteryDataEntry[]>("lcu_request", {method: "get", path: "/lol-champion-mastery/v1/local-player/champion-mastery"}).then(x => {
 		console.log("/lol-champion-mastery/v1/local-player/champion-mastery", x);
 		setData(prev => ({...prev, mastery_data: x}));
 	});
