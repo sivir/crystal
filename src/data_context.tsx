@@ -18,6 +18,18 @@ export type MasteryDataEntry = {
 	tokensEarned: number;
 };
 
+export type DatabaseData = {
+	data: {
+		riot_data: any;
+		mastery_data: MasteryDataEntry[];
+	}
+}
+
+export type SummonerData = {
+	tagLine: string;
+	gameName: string;
+}
+
 export type ChampionSummaryItem = {
 	id: number;
 	name: string;
