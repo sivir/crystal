@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
-import { ChampionSummaryItem, DatabaseData, LCUData, SummonerData, useData } from "@/data_context.tsx";
+import { ChampionSummaryItem, DatabaseData, LCUData, RegionLocale, SummonerData, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { page_name, PageData } from "@/data_context.tsx";
 
@@ -39,9 +39,11 @@ export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageDa
 	// 	setData(prev => ({...prev, mastery_data: mastery_data}));
 	// });
 	invoke<SummonerData>("lcu_request", {method: "get", path: "/lol-summoner/v1/current-summoner"}).then(summoner_data => {
-		supabase.functions.invoke<DatabaseData>("get-user", { body: { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: "na" } }).then(database_data => {
-			console.log("supabase data", database_data);
-			setData(prev => ({...prev, riot_data: database_data.data.riot_data, mastery_data: database_data.data.mastery_data}));
+		invoke<RegionLocale>("lcu_request", {method: "get", path: "/riotclient/region-locale"}).then(region_data => {
+			supabase.functions.invoke<DatabaseData>("get-user", { body: { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() } }).then(database_data => {
+				console.log("supabase data", database_data);
+				setData(prev => ({...prev, riot_data: database_data.data.riot_data, mastery_data: database_data.data.mastery_data}));
+			});
 		});
 	});
 }

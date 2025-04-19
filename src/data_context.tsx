@@ -30,6 +30,10 @@ export type SummonerData = {
 	gameName: string;
 }
 
+export type RegionLocale = {
+	region: string;
+}
+
 export type ChampionSummaryItem = {
 	id: number;
 	name: string;
@@ -44,6 +48,7 @@ export type ChampionSummaryMap = {
 export type LCUData = {
 	[id: number]: {
 		currentValue: number;
+		completedIds: number[];
 		thresholds: {
 			[key: string]: {
 				value: number;

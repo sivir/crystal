@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, ChevronDown, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bar, BarChart, XAxis, YAxis, Text, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -10,6 +10,8 @@ import { MasteryDataEntry, useData } from "@/data_context.tsx";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { challenge_icon } from "@/lib/utils.ts";
 
 const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
 const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
@@ -23,6 +25,7 @@ type ChampionTableRow = {
 	icon_url: string;
 	points_since_last_level: number;
 	points_until_next_level: number;
+	checks: boolean[];
 }
 
 const default_mastery_data: MasteryDataEntry = {
@@ -63,6 +66,7 @@ export default function Champions() {
 	const [search, set_search] = useState<string>('');
 	const [sort_field, set_sort_field] = useState<keyof ChampionTableRow>('mastery_level');
 	const [sort_direction, set_sort_direction] = useState<'asc' | 'desc'>('desc');
+	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001];
 
 	useEffect(() => {
 		set_champion_table_data(Object.entries(data.champion_map).map(([id, champion]) => {
@@ -74,7 +78,8 @@ export default function Champions() {
 				mastery_points: current_mastery_data.championPoints,
 				icon_url: champion.squarePortraitPath,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
-				points_until_next_level: current_mastery_data.championPointsUntilNextLevel
+				points_until_next_level: current_mastery_data.championPointsUntilNextLevel,
+				checks: tracked_challenges.map(x => data.lcu_data[x]?.completedIds.includes(parseInt(id)))
 			};
 		}));
 	}, [data.champion_map, data.mastery_data, data.lcu_data]);
@@ -166,7 +171,7 @@ export default function Champions() {
 									}
 
 									return (
-										<div className="flex-1 min-w-[70px] p-1" key={class_name}>
+										<div className="flex-1 min-w-[70px]" key={class_name}>
 											<ResponsiveContainer width="100%" height={250}>
 												<BarChart data={chart_data}>
 													<ChartTooltip
@@ -195,7 +200,7 @@ export default function Champions() {
 															/>
 														}
 													/>
-													<XAxis dataKey="name" />
+													<XAxis dataKey="name" interval={0} />
 													<YAxis 
 														width={20} 
 														ticks={m7_thresholds.filter(value => value >= m10_current)} 
@@ -240,18 +245,7 @@ export default function Champions() {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Total Value</p>
-								<p className="text-2xl font-bold">$12,345</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Average Performance</p>
-								<p className="text-2xl font-bold">87%</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Active Users</p>
-								<p className="text-2xl font-bold">1,234</p>
-							</div>
+							temporary
 						</div>
 					</CardContent>
 				</Card>
@@ -378,6 +372,7 @@ export default function Champions() {
 							<TableHead></TableHead>
 							<TableHead>Mastery</TableHead>
 							<TableHead>Points until Level</TableHead>
+							{tracked_challenges.map(x => <TableHead key={x}><img src={challenge_icon(data.lcu_data, x)} alt="icon" className="w-6 h-6" /></TableHead>)}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -390,7 +385,30 @@ export default function Champions() {
 									))}
 								</TableCell>
 								<TableCell><Badge className={mastery_color(item.mastery_level)}>{item.mastery_level}</Badge> {item.mastery_points}</TableCell>
-								<TableCell>{item.points_since_last_level}/{item.points_since_last_level + item.points_until_next_level}</TableCell>
+								<TableCell>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<div>
+												<div className="flex items-center gap-2">
+													<div className="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
+														<div 
+															className={`h-1 rounded-full ${item.points_until_next_level <= 0 ? 'bg-green-500' : 'bg-black'}`}
+															style={{ 
+																width: `${(item.points_since_last_level / (item.points_since_last_level + Math.max(0, item.points_until_next_level))) * 100}%` 
+															}}
+														></div>
+													</div>
+												</div>
+											</div>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>{item.points_since_last_level}/{item.points_since_last_level + item.points_until_next_level}</p>
+										</TooltipContent>
+									</Tooltip>
+								</TableCell>
+								{item.checks.map((check, j) => (
+									<TableCell key={j}>{check ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
+								))}
 							</TableRow>
 						))}
 					</TableBody>
