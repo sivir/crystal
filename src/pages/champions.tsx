@@ -1,19 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, Check, ChevronDown, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bar, BarChart, XAxis, YAxis, Text, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useEffect, useMemo, useState } from "react";
 import { MasteryDataEntry, useData } from "@/data_context.tsx";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { challenge_icon } from "@/lib/utils.ts";
+import { FilterDropdown } from "@/components/filter_dropdown.tsx";
 
 const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
+// const classes = ["assassin", "fighter", "mage", "marksman", "support", "tank"];
 const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
 const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
 
@@ -61,12 +62,12 @@ function mastery_color(level: number): string {
 export default function Champions() {
 	const { data } = useData();
 	const [champion_table_data, set_champion_table_data] = useState<ChampionTableRow[]>([]);
-	const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 	const [selected_roles, set_selected_roles] = useState<string[]>([]);
 	const [search, set_search] = useState<string>('');
 	const [sort_field, set_sort_field] = useState<keyof ChampionTableRow>('mastery_level');
 	const [sort_direction, set_sort_direction] = useState<'asc' | 'desc'>('desc');
-	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001];
+	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
+	const [selected_challenges, set_selected_challenges] = useState(tracked_challenges);
 
 	useEffect(() => {
 		set_champion_table_data(Object.entries(data.champion_map).map(([id, champion]) => {
@@ -117,7 +118,7 @@ export default function Champions() {
 
 	const filtered_table_data = useMemo(() => {
 		return sorted_table_data.filter(item => {
-			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.includes(role));
+			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.map(x => x.toLowerCase()).includes(role));
 			const nameMatch = search === '' || item.name.toLowerCase().includes(search.toLowerCase());
 
 			return roleMatch && nameMatch;
@@ -262,39 +263,13 @@ export default function Champions() {
 						/>
 					</div>
 
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" className="w-[200px] justify-between">
-								Roles ({selected_roles.length})
-								<ChevronDown className="h-4 w-4 opacity-50" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent className="w-[200px]">
-							{classes.map(role => (
-								<DropdownMenuCheckboxItem
-									key={role}
-									checked={selected_roles.includes(role.toLowerCase())}
-									onCheckedChange={(checked) => {
-										set_selected_roles(checked
-											? [...selected_roles, role.toLowerCase()]
-											: selected_roles.filter(r => r !== role.toLowerCase())
-										);
-									}}
-								>
-									{role}
-								</DropdownMenuCheckboxItem>
-							))}
-							<DropdownMenuSeparator />
-							<DropdownMenuCheckboxItem
-								checked={selected_roles.length === classes.length}
-								onCheckedChange={(checked) => {
-									set_selected_roles(checked ? classes.map(role => role.toLowerCase()) : []);
-								}}
-							>
-								Select All
-							</DropdownMenuCheckboxItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<FilterDropdown
+						title="Roles"
+						items={classes}
+						selected_items={selected_roles}
+						set_selected_items={set_selected_roles}
+						item_to_label={(item: string) => item}
+					/>
 
 					<div className="flex items-center gap-1">
 						<Select
@@ -329,38 +304,13 @@ export default function Champions() {
 						</Button>
 					</div>
 
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" className="w-[200px] justify-between">
-								Types ({selectedTypes.length})
-								<ChevronDown className="h-4 w-4 opacity-50" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent className="w-[200px]">
-							<DropdownMenuCheckboxItem
-								checked={selectedTypes.includes("type1")}
-								onCheckedChange={(checked) => {
-									setSelectedTypes(checked
-										? [...selectedTypes, "type1"]
-										: selectedTypes.filter(t => t !== "type1")
-									);
-								}}
-							>
-								Type 1
-							</DropdownMenuCheckboxItem>
-							<DropdownMenuCheckboxItem
-								checked={selectedTypes.includes("type2")}
-								onCheckedChange={(checked) => {
-									setSelectedTypes(checked
-										? [...selectedTypes, "type2"]
-										: selectedTypes.filter(t => t !== "type2")
-									);
-								}}
-							>
-								Type 2
-							</DropdownMenuCheckboxItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<FilterDropdown
+						title="Challenges"
+						items={tracked_challenges}
+						selected_items={selected_challenges}
+						set_selected_items={set_selected_challenges}
+						item_to_label={(item: number) => data.lcu_data[item].name}
+					/>
 				</div>
 			</div>
 
@@ -372,12 +322,13 @@ export default function Champions() {
 							<TableHead></TableHead>
 							<TableHead>Mastery</TableHead>
 							<TableHead>Points until Level</TableHead>
-							{tracked_challenges.map(x => <TableHead key={x}><img src={challenge_icon(data.lcu_data, x)} alt="icon" className="w-6 h-6" /></TableHead>)}
+							{selected_challenges.map(x => <TableHead key={x}><img src={challenge_icon(data.lcu_data, x)} alt="icon" className="w-6 h-6" /></TableHead>)}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{filtered_table_data.map((item, i) => (
 							<TableRow key={i} className={catch_em_all > 0 && item.mastery_points >= catch_em_all ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
+							 {/*<TableRow key={i}>*/}
 								<TableCell>{item.name}</TableCell>
 								<TableCell>
 									{item.roles.map((role, j) => (
@@ -406,9 +357,12 @@ export default function Champions() {
 										</TooltipContent>
 									</Tooltip>
 								</TableCell>
-								{item.checks.map((check, j) => (
-									<TableCell key={j}>{check ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
-								))}
+								{selected_challenges.map((challenge, j) => {
+									const index = tracked_challenges.indexOf(challenge);
+									return (
+										<TableCell key={j}>{item.checks[index] ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
+									);
+								})}
 							</TableRow>
 						))}
 					</TableBody>

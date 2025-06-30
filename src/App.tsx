@@ -1,21 +1,21 @@
 import React, { useEffect } from "react";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
-import { ChampionSummaryItem, DatabaseData, LCUData, RegionLocale, SummonerData, useData } from "@/data_context.tsx";
+import { ChampionSummaryItem, DatabaseData, LCUData, page_name, PageData, RegionLocale, SummonerData, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
-import { page_name, PageData } from "@/data_context.tsx";
+import { createClient } from "@supabase/supabase-js";
 
 import Champions from "@/pages/champions.tsx";
 import Debug from "@/pages/debug.tsx";
-
-import { createClient } from "@supabase/supabase-js";
+import Lobby from "@/pages/lobby.tsx";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
 
 // const Champions = lazy(() => import("@/pages/champions.tsx"));
 // const Debug = lazy(() => import("@/pages/debug.tsx"));
 
 const page_components: Record<page_name, React.ComponentType> = {
 	"home": Champions,
-	"inbox": Champions,
+	"lobby": Lobby,
 	"calendar": Champions,
 	"search": Champions,
 	"settings": Champions,
@@ -42,6 +42,10 @@ export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageDa
 		invoke<RegionLocale>("lcu_request", {method: "get", path: "/riotclient/region-locale"}).then(region_data => {
 			supabase.functions.invoke<DatabaseData>("get-user", { body: { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() } }).then(database_data => {
 				console.log("supabase data", database_data);
+				if (database_data.data === null) {
+					return;
+				}
+				console.log("riot_data", database_data.data.riot_data);
 				setData(prev => ({...prev, riot_data: database_data.data.riot_data, mastery_data: database_data.data.mastery_data}));
 			});
 		});
@@ -76,7 +80,7 @@ export default function App() {
 
 	return (
 		<div className="container">
-			<PageComponent />
+			{data.has_lcu_data ? <PageComponent /> : <Skeleton />}
 		</div>
 	);
 }

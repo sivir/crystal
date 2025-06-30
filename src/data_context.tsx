@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type page_name = "home" | "inbox" | "calendar" | "search" | "settings" | "debug";
+export type page_name = "home" | "lobby" | "calendar" | "search" | "settings" | "debug";
 
 export type MasteryDataEntry = {
 	championId: number;
@@ -19,10 +19,8 @@ export type MasteryDataEntry = {
 };
 
 export type DatabaseData = {
-	data: {
-		riot_data: any;
-		mastery_data: MasteryDataEntry[];
-	}
+	riot_data: any;
+	mastery_data: MasteryDataEntry[];
 }
 
 export type SummonerData = {
@@ -47,12 +45,17 @@ export type ChampionSummaryMap = {
 
 export type LCUData = {
 	[id: number]: {
+		name: string;
 		currentValue: number;
+		currentLevel: string;
 		completedIds: number[];
 		thresholds: {
 			[key: string]: {
 				value: number;
 			}
+		}
+		levelToIconPath: {
+			[key: string]: string;
 		}
 	}
 }
