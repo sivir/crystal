@@ -1,9 +1,10 @@
 import React, { useEffect } from "react";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
-import { ChampionSummaryItem, DatabaseData, LCUData, page_name, PageData, RegionLocale, SummonerData, useData } from "@/data_context.tsx";
+import { ChampionSummaryItem, ChampSelectSession, DatabaseData, GameflowSession, LCUData, page_name, PageData, RegionLocale, SummonerData, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { createClient } from "@supabase/supabase-js";
+import { lcu_get_request } from "@/lib/utils.ts";
 
 import Champions from "@/pages/champions.tsx";
 import Debug from "@/pages/debug.tsx";
@@ -24,11 +25,17 @@ const page_components: Record<page_name, React.ComponentType> = {
 
 const supabase = createClient("https://jvnhtmgsncslprdrnkth.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2bmh0bWdzbmNzbHByZHJua3RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTQ2Mjc4ODMsImV4cCI6MjAxMDIwMzg4M30.OOjwsPjGHEc-x8MlhrOX64tJTNENqKqEq2635HKErrk");
 
-async function lcu_get_request<t>(path: string) {
-	const x = await invoke<t>("lcu_request", { method: "get", path: path });
-	console.log("get", path, x);
-	return x;
-}
+// async function lcu_post_request<t>(path: string, body: any) {
+// 	const x = await invoke<t>("lcu_request", { method: "post", path: path, body: body });
+// 	console.log("post", path, x);
+// 	return x;
+// }
+//
+// async function lcu_put_request<t>(path: string, body: any) {
+// 	const x = await invoke<t>("lcu_request", { method: "put", path: path, body: body });
+// 	console.log("put", path, x);
+// 	return x;
+// }
 
 export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageData>>) {
 	lcu_get_request<LCUData>("/lol-challenges/v1/challenges/local-player").then(lcu_data => {
@@ -38,8 +45,8 @@ export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageDa
 	// invoke<MasteryDataEntry[]>("lcu_request", {method: "get", path: "/lol-champion-mastery/v1/local-player/champion-mastery"}).then(mastery_data => {
 	// 	setData(prev => ({...prev, mastery_data: mastery_data}));
 	// });
-	invoke<SummonerData>("lcu_request", {method: "get", path: "/lol-summoner/v1/current-summoner"}).then(summoner_data => {
-		invoke<RegionLocale>("lcu_request", {method: "get", path: "/riotclient/region-locale"}).then(region_data => {
+	lcu_get_request<SummonerData>("/lol-summoner/v1/current-summoner").then(summoner_data => {
+		lcu_get_request<RegionLocale>("/riotclient/region-locale").then(region_data => {
 			supabase.functions.invoke<DatabaseData>("get-user", { body: { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() } }).then(database_data => {
 				console.log("supabase data", database_data);
 				if (database_data.data === null) {
@@ -71,6 +78,42 @@ export default function App() {
 		const unlisten = listen<boolean>('connection', (event) => {
 			console.log('League connection status changed:', event.payload);
 			setData(prev => ({...prev, connected: event.payload}));
+		});
+
+		return () => {
+			unlisten.then(f => f());
+		};
+	}, []);
+
+	useEffect(() => {
+		lcu_get_request<ChampSelectSession>("/lol-champ-select/v1/session").then(x => {
+			setData(prev => ({...prev, champ_select_session: x}));
+		});
+		const unlisten = listen<any>('champ-select', (event) => {
+			console.log('Champ select event:', event.payload);
+			if (event.payload && event.payload.data) {
+				setData(prev => ({...prev, champ_select_session: event.payload.data as ChampSelectSession}));
+			} else {
+				setData(prev => ({...prev, champ_select_session: null}));
+			}
+		});
+
+		return () => {
+			unlisten.then(f => f());
+		};
+	}, []);
+
+	useEffect(() => {
+		lcu_get_request<GameflowSession>("/lol-gameflow/v1/session").then(x => {
+			setData(prev => ({...prev, gameflow_session: x}));
+		});
+		const unlisten = listen<any>('gameflow', (event) => {
+			console.log('Gameflow event:', event.payload);
+			if (event.payload) {
+				setData(prev => ({...prev, gameflow_session: event.payload.data as GameflowSession}));
+			} else {
+				setData(prev => ({...prev, gameflow_session: null}));
+			}
 		});
 
 		return () => {

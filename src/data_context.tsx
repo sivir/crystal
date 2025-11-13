@@ -60,6 +60,68 @@ export type LCUData = {
 	}
 }
 
+export type ChampSelectPlayer = {
+	assignedPosition: string;
+	cellId: number;
+	championId: number;
+	championPickIntent: number;
+	selectedSkinId: number;
+	spell1Id: number;
+	spell2Id: number;
+	summonerId: number;
+	team: number;
+	wardSkinId: number;
+}
+
+export type ChampSelectSession = {
+	actions: any[][];
+	allowBattleBoost: boolean;
+	allowDuplicatePicks: boolean;
+	allowLockedEvents: boolean;
+	allowRerolling: boolean;
+	allowSkinSelection: boolean;
+	benchChampions: {
+		championId: number;
+	}[];
+	benchEnabled: boolean;
+	boostableSkinCount: number;
+	chatDetails: {
+		chatRoomName: string;
+		chatRoomPassword: string;
+	};
+	counter: number;
+	gameId: number;
+	hasSimultaneousBans: boolean;
+	hasSimultaneousPicks: boolean;
+	isCustomGame: boolean;
+	isSpectating: boolean;
+	localPlayerCellId: number;
+	lockedEventIndex: number;
+	myTeam: ChampSelectPlayer[];
+	recoveryCounter: number;
+	rerollsRemaining: number;
+	skipChampionSelect: boolean;
+	theirTeam: ChampSelectPlayer[];
+	timer: {
+		adjustedTimeLeftInPhase: number;
+		internalNowInEpochMs: number;
+		isInfinite: boolean;
+		phase: string;
+		totalTimeInPhase: number;
+	};
+	trades: any[];
+}
+
+export type GameflowSession = {
+	phase: string;
+	gameData?: {
+		queue?: {
+			gameMode?: string;
+			id?: number;
+		};
+	};
+}
+
 export interface PageData {
 	riot_data: any;
 	lcu_data: LCUData;
@@ -68,6 +130,8 @@ export interface PageData {
 	page: page_name;
 	connected: boolean;
 	has_lcu_data: boolean;
+	champ_select_session: ChampSelectSession | null;
+	gameflow_session: GameflowSession | null;
 }
 
 const initial_page_data: PageData = {
@@ -78,6 +142,8 @@ const initial_page_data: PageData = {
 	page: "home",
 	connected: false,
 	has_lcu_data: false,
+	champ_select_session: null,
+	gameflow_session: null,
 };
 
 const DataContext = createContext<{data: PageData, setData: React.Dispatch<React.SetStateAction<PageData>>}>({

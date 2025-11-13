@@ -1,16 +1,17 @@
+import { useEffect, useMemo, useState } from "react";
+import { MasteryDataEntry, useData } from "@/data_context.tsx";
+import { challenge_icon } from "@/lib/utils.ts";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDown, ArrowUp, Check, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bar, BarChart, XAxis, YAxis, Text, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, Text, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useEffect, useMemo, useState } from "react";
-import { MasteryDataEntry, useData } from "@/data_context.tsx";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { challenge_icon } from "@/lib/utils.ts";
 import { FilterDropdown } from "@/components/filter_dropdown.tsx";
 
 const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
@@ -328,7 +329,6 @@ export default function Champions() {
 					<TableBody>
 						{filtered_table_data.map((item, i) => (
 							<TableRow key={i} className={catch_em_all > 0 && item.mastery_points >= catch_em_all ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
-							 {/*<TableRow key={i}>*/}
 								<TableCell>{item.name}</TableCell>
 								<TableCell>
 									{item.roles.map((role, j) => (

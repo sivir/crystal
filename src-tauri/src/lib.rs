@@ -1,20 +1,17 @@
 use std::{sync::Arc, thread, time::Duration};
 use tauri::{menu::{Menu, MenuItem}, tray::TrayIconBuilder, AppHandle, Emitter, Manager, State};
 use irelia::{ws::LcuWebSocket, rest::LcuClient};
+use irelia::ws::Subscriber;
+use irelia::ws::types::EventKind;
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use serde_derive::{Deserialize, Serialize};
 
 pub struct Data {
-	pub lcu_client: Option<LcuClient>,
+	pub lcu_client: Option<LcuClient<irelia::requests::RequestClientType>>,
 	pub ws_client: Option<LcuWebSocket>,
 	pub connected: bool,
 }
-//
-// struct GameflowEventHandler {
-// 	app_handle: AppHandle,
-// 	gameflow: String
-// }
 
 impl Data {
 	fn new() -> Self {
@@ -25,11 +22,36 @@ impl Data {
 		}
 	}
 
-	fn connect(&mut self) -> Result<(), irelia::Error> {
+	fn connect(&mut self, app_handle: AppHandle) -> Result<(), irelia::requests::Error> {
+		struct ChampSelectEventHandler {
+			app_handle: AppHandle,
+		}
+
+		impl Subscriber for ChampSelectEventHandler {
+			fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
+				//println!("Champ select event: {:?}", event);
+				self.app_handle.emit("champ-select", event.2.clone()).unwrap();
+			}
+		}
+
+		struct GameflowEventHandler {
+			app_handle: AppHandle,
+		}
+
+		impl Subscriber for GameflowEventHandler {
+			fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
+				//println!("Gameflow event: {:?}", event);
+				self.app_handle.emit("gameflow", event.2.clone()).unwrap();
+			}
+		}
+
 		match LcuClient::connect() {
 			Ok(client) => {
 				self.lcu_client = Some(client);
-				self.ws_client = Some(LcuWebSocket::new());
+				let mut ws_client = LcuWebSocket::new();
+				ws_client.subscribe(EventKind::json_api_event_callback("/lol-champ-select/v1/session"), ChampSelectEventHandler { app_handle: app_handle.clone() });
+				ws_client.subscribe(EventKind::json_api_event_callback("/lol-gameflow/v1/session"), GameflowEventHandler { app_handle: app_handle.clone() });
+				self.ws_client = Some(ws_client);
 				Ok(())
 			}
 			Err(e) => Err(e),
@@ -40,6 +62,11 @@ impl Data {
 #[tauri::command]
 async fn lcu_request(state: State<'_, Arc<Mutex<Data>>>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
 	let state = state.lock().await;
+
+	// println!("lcu_request: {} {}", method, path);
+	// if body.is_some() {
+	// 	println!("body: {:?}", body.clone().unwrap());
+	// }
 	
 	match &state.lcu_client {
 		Some(client) => match method.to_lowercase().as_str() {
@@ -134,7 +161,7 @@ pub fn run() {
 						let mut state = thread_state.lock().await;
 
 						if !state.connected {
-							match state.connect() {
+							match state.connect(app_handle.clone()) {
 								Ok(()) => {
 									println!("Successfully connected to League client");
 									state.connected = true;
