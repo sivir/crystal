@@ -62,11 +62,6 @@ impl Data {
 #[tauri::command]
 async fn lcu_request(state: State<'_, Arc<Mutex<Data>>>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
 	let state = state.lock().await;
-
-	// println!("lcu_request: {} {}", method, path);
-	// if body.is_some() {
-	// 	println!("body: {:?}", body.clone().unwrap());
-	// }
 	
 	match &state.lcu_client {
 		Some(client) => match method.to_lowercase().as_str() {

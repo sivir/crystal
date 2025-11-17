@@ -6,10 +6,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { createClient } from "@supabase/supabase-js";
 import { lcu_get_request } from "@/lib/utils.ts";
 
+import { Skeleton } from "@/components/ui/skeleton.tsx";
 import Champions from "@/pages/champions.tsx";
 import Debug from "@/pages/debug.tsx";
 import Lobby from "@/pages/lobby.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
+import Profile from "@/pages/profile.tsx";
 
 // const Champions = lazy(() => import("@/pages/champions.tsx"));
 // const Debug = lazy(() => import("@/pages/debug.tsx"));
@@ -17,25 +18,13 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 const page_components: Record<page_name, React.ComponentType> = {
 	"home": Champions,
 	"lobby": Lobby,
-	"calendar": Champions,
+	"profile": Profile,
 	"search": Champions,
 	"settings": Champions,
 	"debug": Debug,
 }
 
 const supabase = createClient("https://jvnhtmgsncslprdrnkth.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2bmh0bWdzbmNzbHByZHJua3RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTQ2Mjc4ODMsImV4cCI6MjAxMDIwMzg4M30.OOjwsPjGHEc-x8MlhrOX64tJTNENqKqEq2635HKErrk");
-
-// async function lcu_post_request<t>(path: string, body: any) {
-// 	const x = await invoke<t>("lcu_request", { method: "post", path: path, body: body });
-// 	console.log("post", path, x);
-// 	return x;
-// }
-//
-// async function lcu_put_request<t>(path: string, body: any) {
-// 	const x = await invoke<t>("lcu_request", { method: "put", path: path, body: body });
-// 	console.log("put", path, x);
-// 	return x;
-// }
 
 export function refresh_data(setData: React.Dispatch<React.SetStateAction<PageData>>) {
 	lcu_get_request<LCUData>("/lol-challenges/v1/challenges/local-player").then(lcu_data => {

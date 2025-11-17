@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, X } from "lucide-react";
+import { ChampSelectPlayer } from "@/data_context";
 
 const ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID = 602002; // arena (win on all champs)
 const ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID = 101301; // aram (s- or better on all champs)
@@ -42,7 +43,7 @@ function mastery_color(level: number): string {
 	return mastery_colors[level] || "";
 }
 
-const queue_ids = {
+const queue_ids: Record<number, string> = {
 	1700: "arena",
 	450: "aram",
 	2400: "aram-mayhem"
@@ -56,18 +57,17 @@ export default function Lobby() {
 		if (!data.gameflow_session) {
 			return null;
 		}
-		const queue_id = data.gameflow_session.gameData?.queue?.id;
+		const queue_id = data.gameflow_session.gameData?.queue?.id ?? 450;
 		return queue_ids[queue_id] ?? null;
 	}, [data.gameflow_session]);
 
-	const arena_champ_select = game_mode === "arena" && data.gameflow_session.phase == "ChampSelect";
-	const isInAramChampSelect = (game_mode === "aram" || game_mode === "aram-mayhem") && data.gameflow_session.phase == "ChampSelect";
+	const arena_champ_select = game_mode === "arena" && data.gameflow_session?.phase == "ChampSelect";
+	const isInAramChampSelect = (game_mode === "aram" || game_mode === "aram-mayhem") && data.gameflow_session?.phase == "ChampSelect";
 	const isAramMayhem = game_mode === "aram-mayhem";
 
-	// Fetch crowd favorites when in Arena champ select
 	useEffect(() => {
 		if (arena_champ_select && data.connected) {
-			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list").then((response) => {
+			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list").then((response) => { // typo is intentional
 				console.log("Crowd favorite champions:", response);
 				set_crowd_favorites(response);
 			});
@@ -81,7 +81,7 @@ export default function Lobby() {
 		if (!isInAramChampSelect || !data.champ_select_session) return [];
 
 		const session = data.champ_select_session;
-		const champion_ids = session.myTeam.map((player: ChampSelectPlayer) => player.championId).concat(session.benchChampions.map((benchChamp: any) => benchChamp.championId));
+		const champion_ids = session.myTeam.map((player: ChampSelectPlayer) => player.championId).concat(session.benchChampions.map((benchChamp: any) => benchChamp.championId)).filter(id => id > 0);
 
 		const aramChallenge = !isAramMayhem ? data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID] : null;
 

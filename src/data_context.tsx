@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState, useMemo } from "react";
 
-export type page_name = "home" | "lobby" | "calendar" | "search" | "settings" | "debug";
+export type page_name = "home" | "lobby" | "profile" | "search" | "settings" | "debug";
 
 export type MasteryDataEntry = {
 	championId: number;
@@ -46,6 +46,7 @@ export type ChampionSummaryMap = {
 export type LCUData = {
 	[id: number]: {
 		name: string;
+		description: string;
 		currentValue: number;
 		currentLevel: string;
 		completedIds: number[];
@@ -122,8 +123,38 @@ export type GameflowSession = {
 	};
 }
 
+export type APIRiotData = {
+	totalPoints: {
+		current: number;
+		level: string;
+		max: number;
+		position: number;
+	},
+	preferences: {
+		challengeIds: number[];
+	},
+	challenges: {
+		challengeId: number;
+		level: string;
+		value: number;
+	}[]
+}
+
+const default_riot_challenge_data: APIRiotData = {
+	totalPoints: {
+		current: 0,
+		level: "CHALLENGER",
+		max: 0,
+		position: 0
+	},
+	preferences: {
+		challengeIds: []
+	},
+	challenges: []
+};
+
 export interface PageData {
-	riot_data: any;
+	riot_data: APIRiotData;
 	lcu_data: LCUData;
 	mastery_data: MasteryDataEntry[];
 	champion_map: ChampionSummaryMap;
@@ -135,7 +166,7 @@ export interface PageData {
 }
 
 const initial_page_data: PageData = {
-	riot_data: null,
+	riot_data: default_riot_challenge_data,
 	lcu_data: {},
 	mastery_data: [],
 	champion_map: {},
@@ -153,10 +184,8 @@ const DataContext = createContext<{data: PageData, setData: React.Dispatch<React
 
 export function DataProvider({children}: {children: React.ReactNode}) {
 	const [data, setData] = useState<PageData>(initial_page_data);
-	useEffect(() => {
-		setData(prev => ({...prev, has_lcu_data: Object.keys(prev.lcu_data).length > 0}));
-	}, [data.lcu_data]);
-	return <DataContext.Provider value={{data, setData}}>{children}</DataContext.Provider>;
+	const has_lcu_data = useMemo(() => Object.keys(data.lcu_data).length > 0, [data.lcu_data]);
+	return <DataContext.Provider value={{data: {...data, has_lcu_data}, setData}}>{children}</DataContext.Provider>;
 }
 
 export function useData() {

@@ -1,4 +1,4 @@
-import { Home, Moon, Sun, RefreshCcw, Bug } from "lucide-react";
+import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen } from "lucide-react";
 import {
 	Sidebar,
 	SidebarContent, SidebarFooter,
@@ -28,13 +28,13 @@ const items: { title: string, url: page_name, icon: any }[] = [
 	{
 		title: "Lobby",
 		url: "lobby",
-		icon: Home,
+		icon: Users,
 	},
-	// {
-	// 	title: "Calendar",
-	// 	url: "calendar",
-	// 	icon: Calendar,
-	// },
+	{
+		title: "Profile",
+		url: "profile",
+		icon: UserPen,
+	},
 	// {
 	// 	title: "Search",
 	// 	url: "search",

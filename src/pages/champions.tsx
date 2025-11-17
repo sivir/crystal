@@ -323,7 +323,16 @@ export default function Champions() {
 							<TableHead></TableHead>
 							<TableHead>Mastery</TableHead>
 							<TableHead>Points until Level</TableHead>
-							{selected_challenges.map(x => <TableHead key={x}><img src={challenge_icon(data.lcu_data, x)} alt="icon" className="w-6 h-6" /></TableHead>)}
+							{selected_challenges.map(x => <TableHead key={x}>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<img src={challenge_icon(x)} alt="icon" className="w-6 h-6" />
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>{data.lcu_data[x].description} ({data.lcu_data[x].completedIds.length} / {Object.keys(data.champion_map).length})</p>
+									</TooltipContent>
+								</Tooltip>
+							</TableHead>)}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
