@@ -279,8 +279,8 @@ export default function Skins() {
 		let max_champion_total = 0;
 
 		Object.keys(data.champion_map).forEach(champion_id => {
-			const owned = champion_owned_counts.get(champion_id) || 0;
-			const loot = champion_loot_counts.get(champion_id) || 0;
+			const owned = champion_owned_counts.get(parseInt(champion_id)) || 0;
+			const loot = champion_loot_counts.get(parseInt(champion_id)) || 0;
 			const total = owned + loot;
 
 			if (total >= 5) {

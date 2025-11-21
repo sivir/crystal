@@ -78,6 +78,9 @@ async function app_icon(): Promise<string> {
 		size.width,
 		size.height
 	);
+	if (!context) {
+		return "";
+	}
 	context.putImageData(imageData, 0, 0);
 	const blob = await canvas.convertToBlob({
 		type: "image/png"

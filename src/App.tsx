@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, PageData, APIRegionLocale, APISummonerData, useData } from "@/data_context.tsx";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, PageData, APISkinMetadataMap, APIRegionLocale, APISummonerData, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 
