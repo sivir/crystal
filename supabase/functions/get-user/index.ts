@@ -1,9 +1,16 @@
-import { cors_headers, get_user, update_riot_data, riot_api_key } from '../_shared/update_db.ts';
+import { cors_headers, get_user, update_riot_data, riot_api_key, supabase_secret } from '../_shared/update_db.ts';
 
 Deno.serve(async (req)=>{
 	// allow calling from browser
 	if (req.method === 'OPTIONS') {
 		return new Response('ok', {
+			headers: cors_headers
+		});
+	}
+	// check if secret matches
+	if (req.headers.get('x-secret') !== supabase_secret) {
+		return new Response('Unauthorized', {
+			status: 401,
 			headers: cors_headers
 		});
 	}

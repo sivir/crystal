@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useMemo } from "react";
 
-export type page_name = "home" | "lobby" | "profile" | "search" | "settings" | "debug";
+export type page_name = "home" | "lobby" | "profile" | "skins" | "settings" | "debug";
 
-export type MasteryDataEntry = {
+export type APIMasteryDataEntry = {
 	championId: number;
 	championLevel: number;
 	championPoints: number;
@@ -18,50 +18,64 @@ export type MasteryDataEntry = {
 	tokensEarned: number;
 };
 
-export type DatabaseData = {
+export type APIDatabaseData = {
 	riot_data: any;
-	mastery_data: MasteryDataEntry[];
+	mastery_data: APIMasteryDataEntry[];
 }
 
-export type SummonerData = {
+export type APISummonerData = {
 	tagLine: string;
 	gameName: string;
 }
 
-export type RegionLocale = {
+export type APIRegionLocale = {
 	region: string;
 }
 
-export type ChampionSummaryItem = {
+export type APIChampionSummary = {
 	id: number;
 	name: string;
 	squarePortraitPath: string;
 	roles: string[];
 };
 
-export type ChampionSummaryMap = {
-	[id: number]: ChampionSummaryItem;
+export type APIChampionSummaryMap = {
+	[id: number]: APIChampionSummary;
 }
 
-export type LCUData = {
-	[id: number]: {
-		name: string;
-		description: string;
-		currentValue: number;
-		currentLevel: string;
-		completedIds: number[];
-		thresholds: {
-			[key: string]: {
-				value: number;
-			}
+export type APISkinMetadata = {
+	id: number;
+	isBase: boolean;
+	name: string;
+	rarity: string;
+	isLegacy: boolean;
+};
+
+export type APISkinMetadataMap = {
+	[id: string]: APISkinMetadata;
+}
+
+export type APILCUChallenge = {
+	name: string;
+	description: string;
+	currentValue: number;
+	currentLevel: string;
+	completedIds: number[];
+	thresholds: {
+		[key: string]: {
+			value: number;
 		}
-		levelToIconPath: {
-			[key: string]: string;
-		}
+	}
+	levelToIconPath: {
+		[key: string]: string;
 	}
 }
 
-export type ChampSelectPlayer = {
+export type APILCUChallengeMap = {
+	[id: number]: APILCUChallenge;
+}
+
+export type APIChampSelectPlayer = {
 	assignedPosition: string;
 	cellId: number;
 	championId: number;
@@ -74,7 +88,7 @@ export type ChampSelectPlayer = {
 	wardSkinId: number;
 }
 
-export type ChampSelectSession = {
+export type APIChampSelectSession = {
 	actions: any[][];
 	allowBattleBoost: boolean;
 	allowDuplicatePicks: boolean;
@@ -98,11 +112,11 @@ export type ChampSelectSession = {
 	isSpectating: boolean;
 	localPlayerCellId: number;
 	lockedEventIndex: number;
-	myTeam: ChampSelectPlayer[];
+	myTeam: APIChampSelectPlayer[];
 	recoveryCounter: number;
 	rerollsRemaining: number;
 	skipChampionSelect: boolean;
-	theirTeam: ChampSelectPlayer[];
+	theirTeam: APIChampSelectPlayer[];
 	timer: {
 		adjustedTimeLeftInPhase: number;
 		internalNowInEpochMs: number;
@@ -113,7 +127,7 @@ export type ChampSelectSession = {
 	trades: any[];
 }
 
-export type GameflowSession = {
+export type APIGameflowSession = {
 	phase: string;
 	gameData?: {
 		queue?: {
@@ -155,14 +169,15 @@ const default_riot_challenge_data: APIRiotData = {
 
 export interface PageData {
 	riot_data: APIRiotData;
-	lcu_data: LCUData;
-	mastery_data: MasteryDataEntry[];
-	champion_map: ChampionSummaryMap;
+	lcu_data: APILCUChallengeMap;
+	mastery_data: APIMasteryDataEntry[];
+	champion_map: APIChampionSummaryMap;
+	skin_map: APISkinMetadataMap;
 	page: page_name;
 	connected: boolean;
 	has_lcu_data: boolean;
-	champ_select_session: ChampSelectSession | null;
-	gameflow_session: GameflowSession | null;
+	champ_select_session: APIChampSelectSession | null;
+	gameflow_session: APIGameflowSession | null;
 }
 
 const initial_page_data: PageData = {
@@ -170,6 +185,7 @@ const initial_page_data: PageData = {
 	lcu_data: {},
 	mastery_data: [],
 	champion_map: {},
+	skin_map: {},
 	page: "home",
 	connected: false,
 	has_lcu_data: false,

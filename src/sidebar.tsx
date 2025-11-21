@@ -1,4 +1,11 @@
-import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen } from "lucide-react";
+import { app } from "@tauri-apps/api";
+import { useEffect, useState } from "react";
+import { useData } from "@/data_context.tsx";
+import { page_name } from "@/data_context.tsx";
+import { refresh_data } from "@/App.tsx";
+import { getVersion } from "@tauri-apps/api/app";
+
+import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette } from "lucide-react";
 import {
 	Sidebar,
 	SidebarContent, SidebarFooter,
@@ -12,13 +19,7 @@ import {
 import { useTheme } from "@/theme-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { app } from "@tauri-apps/api";
-import { useEffect, useState } from "react";
-import { useData } from "@/data_context.tsx";
-import { page_name } from "@/data_context.tsx";
-import { refresh_data } from "@/App.tsx";
 
-// Menu items.
 const items: { title: string, url: page_name, icon: any }[] = [
 	{
 		title: "Home",
@@ -35,11 +36,11 @@ const items: { title: string, url: page_name, icon: any }[] = [
 		url: "profile",
 		icon: UserPen,
 	},
-	// {
-	// 	title: "Search",
-	// 	url: "search",
-	// 	icon: Search,
-	// },
+	{
+		title: "Skins",
+		url: "skins",
+		icon: Palette,
+	},
 	// {
 	// 	title: "Settings",
 	// 	url: "settings",
@@ -65,43 +66,36 @@ function ModeToggle() {
 }
 
 async function app_icon(): Promise<string> {
-	try {
-		const icon = await app.defaultWindowIcon();
-		if (!icon) {
-			return "";
-		}
-		const [data, size] = await Promise.all([
-			icon.rgba(),
-			icon.size()
-		]);
-		const canvas = new OffscreenCanvas(size.width, size.height);
-		const ctx = canvas.getContext("2d");
-		if (!ctx) {
-			console.warn("2D context not available for icon conversion");
-			return "";
-		}
-		const imageData = new ImageData(
-			new Uint8ClampedArray(data), 
-			size.width, 
-			size.height
-		);
-		ctx.putImageData(imageData, 0, 0);
-		const blob = await canvas.convertToBlob({
-			type: "image/png"
-		});
-		return URL.createObjectURL(blob);
-	} catch (error) {
-		console.warn("Failed to load window icon:", error);
+	const icon = await app.defaultWindowIcon();
+	if (!icon) {
 		return "";
 	}
+	const [data, size] = await Promise.all([icon.rgba(), icon.size()]);
+	const canvas = new OffscreenCanvas(size.width, size.height);
+	const context = canvas.getContext("2d");
+	const imageData = new ImageData(
+		new Uint8ClampedArray(data),
+		size.width,
+		size.height
+	);
+	context.putImageData(imageData, 0, 0);
+	const blob = await canvas.convertToBlob({
+		type: "image/png"
+	});
+	return URL.createObjectURL(blob);
 }
 
 export function AppSidebar() {
-	const [image64, setImage64] = useState<string>("");
 	const {data, setData} = useData();
+	const [image_src, set_image_src] = useState<string>("");
+	const [version, setVersion] = useState<string>("");
 
 	useEffect(() => {
-		app_icon().then(x => setImage64(x));
+		app_icon().then(x => set_image_src(x));
+	}, []);
+
+	useEffect(() => {
+		getVersion().then(x => setVersion(x));
 	}, []);
 
 	return (
@@ -111,10 +105,10 @@ export function AppSidebar() {
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild>
 							<a href="#">
-								<img src={image64} alt="icon" />
+								<img src={image_src} alt="icon" />
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-semibold">crystal</span>
-									<span className="truncate text-xs">v0.1.1</span>
+									<span className="truncate text-xs">v{version}</span>
 								</div>
 							</a>
 						</SidebarMenuButton>

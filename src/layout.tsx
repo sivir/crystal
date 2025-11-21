@@ -1,3 +1,7 @@
+import { ReactElement } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useData } from "@/data_context.tsx";
+
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/sidebar";
 import {
@@ -9,9 +13,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { X, Square, Minus } from "lucide-react";
 import { Button } from "./components/ui/button";
-import { ReactElement } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useData } from "@/data_context.tsx";
 
 export default function Layout({ children }: { children: ReactElement }) {
 	const {data} = useData();

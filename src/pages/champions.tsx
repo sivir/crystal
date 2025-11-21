@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { MasteryDataEntry, useData } from "@/data_context.tsx";
-import { challenge_icon } from "@/lib/utils.ts";
+import { APIMasteryDataEntry, useData } from "@/data_context.tsx";
+import { challenge_icon, SortDirection } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ type ChampionTableRow = {
 	checks: boolean[];
 }
 
-const default_mastery_data: MasteryDataEntry = {
+const default_mastery_data: APIMasteryDataEntry = {
 	championId: 0,
 	championLevel: 0,
 	championPoints: 0,
@@ -66,7 +66,7 @@ export default function Champions() {
 	const [selected_roles, set_selected_roles] = useState<string[]>([]);
 	const [search, set_search] = useState<string>('');
 	const [sort_field, set_sort_field] = useState<keyof ChampionTableRow>('mastery_level');
-	const [sort_direction, set_sort_direction] = useState<'asc' | 'desc'>('desc');
+	const [sort_direction, set_sort_direction] = useState<SortDirection>('desc');
 	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
 	const [selected_challenges, set_selected_challenges] = useState(tracked_challenges);
 

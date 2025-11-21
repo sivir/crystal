@@ -1,8 +1,10 @@
 # Crystal
 
+warning: this app will run with reduced functionality if you compile it yourself since there is compile-time secrets for function authentication that are not included in this repo, to stop malicious actors from modifying the database. THIS IS SO THAT USERS ARE NOT REQUIRED TO CREATE AN ACCOUNT TO USE IT
+
 desktop client to help you keep track of your league challenges! screenshots incoming
 
-uses tauri, react, tailwind, shadcn, typescript, and v0
+uses tauri with rust and react, typescript, and shadcn/ui with tailwind
 
 special thanks to sylv for help with [irelia](https://github.com/AlsoSylv/irelia)
 
@@ -29,23 +31,20 @@ flowchart LR
     D --> E[React Table]
 ```
 
-![screenshot](screenshots/champions.png "champions table")
-![screenshot](screenshots/eternals.png "eternals")
-![screenshot](screenshots/team_builder.png "team builder")
+## Changelog
 
-## todo
+0.4.0
+- added skin tracker
+- added authentication to supabase functions
+- minor ui tweaks
 
-- [ ] set search filters
-- [ ] take screenshots
-- [ ] add globes, seasonal, and token setter to home
-- [ ] add tooltips to auto globe multisearch
-- [ ] add aram champ select tracker
-- [x] fix column visibility in champion table
-- [ ] add seasonal mark of mastery tracker
-- [ ] add counts to team builder
-- [ ] eternals up to 15 (math with 10x the 5th milestone count)
-- [x] potential issue if people have eternals finished on legacy eternals
-- [x] eternals per champion role
-- [ ] add eternals summary to top of eternals page
-- [ ] improve comparison
-- [ ] skin challenge tracker
+0.3.0
+- added custom status
+- added challenge icon editor
+- added tooltips to homepage challenge icons
+
+0.2.0
+- added functionality to automatically track available champions in aram and crowd favorites for arena and display relevant challenge progress
+
+0.1.0
+- initial release

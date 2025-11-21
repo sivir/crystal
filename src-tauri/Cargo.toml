@@ -1,6 +1,5 @@
 [package]
 name = "crystal"
-version = "0.1.3"
 description = "Challenge Tracker Assistant"
 authors = ["cyan"]
 edition = "2021"

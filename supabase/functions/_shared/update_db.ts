@@ -2,10 +2,11 @@
 import * as postgres from 'https://deno.land/x/postgres@v0.17.0/mod.ts';
 const database_url = Deno.env.get('SUPABASE_DB_URL');
 const riot_api_key = Deno.env.get('RIOT_API_KEY');
+const supabase_secret = Deno.env.get('APP_SECRET');
 const pool = new postgres.Pool(database_url, 3, true);
 const cors_headers = {
 	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+	'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-secret'
 };
 
 const region_to_platform : { [key: string]: string } = {
@@ -69,4 +70,4 @@ async function get_user(id: string) {
 	connection.release();
 	return res.rows;
 }
-export { cors_headers, update_db_riot_data, get_user, update_riot_data, update_db_lcu_data, riot_api_key };
+export { cors_headers, update_db_riot_data, get_user, update_riot_data, update_db_lcu_data, riot_api_key, supabase_secret };
