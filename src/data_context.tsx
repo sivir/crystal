@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useMemo } from "react";
 
-export type page_name = "home" | "lobby" | "profile" | "skins" | "settings" | "debug";
+export type page_name = "home" | "lobby" | "profile" | "skins" | "eternals" | "settings" | "debug";
 
 export type APIMasteryDataEntry = {
 	championId: number;
@@ -53,6 +53,43 @@ export type APISkinMetadata = {
 
 export type APISkinMetadataMap = {
 	[id: string]: APISkinMetadata;
+}
+
+export type APIStatstone = {
+	name: string;
+	contentId: string;
+	itemId: number;
+	isRetired: boolean;
+	trackingType: number;
+	isEpic: boolean;
+	description: string;
+	milestones: number[];
+	boundChampion: {
+		itemId: number;
+		inventoryType: string;
+		contentId: string;
+	};
+	category: string;
+	iconUnowned: string;
+	iconUnlit: string;
+	iconLit: string;
+	iconFull: string;
+};
+
+export type APIStatstoneSet = {
+	name: string;
+	itemId: number;
+	inventoryType: string;
+	contentId: string;
+	statstones: APIStatstone[];
+};
+
+export type APIStatstonesData = {
+	statstoneData: APIStatstoneSet[];
+};
+
+export type StatstonesMap = {
+	[item_id: string]: APIStatstoneSet;
 }
 
 export type APILCUChallenge = {
@@ -173,6 +210,7 @@ export interface PageData {
 	mastery_data: APIMasteryDataEntry[];
 	champion_map: APIChampionSummaryMap;
 	skin_map: APISkinMetadataMap;
+	statstones_map: StatstonesMap;
 	page: page_name;
 	connected: boolean;
 	has_lcu_data: boolean;
@@ -186,6 +224,7 @@ const initial_page_data: PageData = {
 	mastery_data: [],
 	champion_map: {},
 	skin_map: {},
+	statstones_map: {},
 	page: "home",
 	connected: false,
 	has_lcu_data: false,

@@ -1,12 +1,15 @@
 # Crystal
 
-warning: this app will run with reduced functionality if you compile it yourself since there is compile-time secrets for function authentication that are not included in this repo, to stop malicious actors from modifying the database. THIS IS SO THAT USERS ARE NOT REQUIRED TO CREATE AN ACCOUNT TO USE IT
+warning: this app will run with reduced functionality if you compile it yourself since there is a compile-time secret for function authentication that are not included in this repo, to stop malicious actors from modifying the database. this will be removed later once user's are required to log in via RSO (almost no effort to the user)
 
 desktop client to help you keep track of your league challenges! screenshots incoming
 
 uses tauri with rust and react, typescript, and shadcn/ui with tailwind
 
 special thanks to sylv for help with [irelia](https://github.com/AlsoSylv/irelia)
+
+Crystal isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+
 
 ```mermaid
 ---
@@ -32,6 +35,9 @@ flowchart LR
 ```
 
 ## Changelog
+
+0.5.0
+- added eternals tracker
 
 0.4.0
 - added skin tracker

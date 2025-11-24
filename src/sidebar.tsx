@@ -5,7 +5,7 @@ import { page_name } from "@/data_context.tsx";
 import { refresh_data } from "@/App.tsx";
 import { getVersion } from "@tauri-apps/api/app";
 
-import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette } from "lucide-react";
+import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette, Flame } from "lucide-react";
 import {
 	Sidebar,
 	SidebarContent, SidebarFooter,
@@ -40,6 +40,11 @@ const items: { title: string, url: page_name, icon: any }[] = [
 		title: "Skins",
 		url: "skins",
 		icon: Palette,
+	},
+	{
+		title: "Eternals",
+		url: "eternals",
+		icon: Flame,
 	},
 	// {
 	// 	title: "Settings",

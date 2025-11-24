@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, PageData, APISkinMetadataMap, APIRegionLocale, APISummonerData, useData } from "@/data_context.tsx";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, PageData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useData } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 
@@ -11,12 +11,14 @@ import Debug from "@/pages/debug.tsx";
 import Lobby from "@/pages/lobby.tsx";
 import Profile from "@/pages/profile.tsx";
 import Skins from "@/pages/skins.tsx";
+import Eternals from "@/pages/eternals.tsx";
 
 const page_components: Record<page_name, React.ComponentType> = {
 	"home": Champions,
 	"lobby": Lobby,
 	"profile": Profile,
 	"skins": Skins,
+	"eternals": Eternals,
 	"settings": Champions,
 	"debug": Debug,
 }
@@ -58,6 +60,13 @@ export default function App() {
 		});
 		invoke<APISkinMetadataMap>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skins.json" }).then(x => {
 			setData(prev => ({...prev, skin_map: x}));
+		});
+		invoke<APIStatstonesData>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/statstones.json" }).then(x => {
+			const statstones_map: StatstonesMap = {};
+			x.statstoneData.forEach(set => {
+				statstones_map[set.itemId.toString()] = set;
+			});
+			setData(prev => ({...prev, statstones_map}));
 		});
 	}, []);
 
