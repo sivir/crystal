@@ -1,11 +1,15 @@
-use std::{sync::Arc, thread, time::Duration};
-use tauri::{menu::{Menu, MenuItem}, tray::TrayIconBuilder, AppHandle, Emitter, Manager, State};
-use irelia::{ws::LcuWebSocket, rest::LcuClient};
-use irelia::ws::Subscriber;
 use irelia::ws::types::EventKind;
+use irelia::ws::Subscriber;
+use irelia::{rest::LcuClient, ws::LcuWebSocket};
+use serde_derive::{Deserialize, Serialize};
+use std::{sync::Arc, thread, time::Duration};
+use tauri::{
+	menu::{Menu, MenuItem},
+	tray::TrayIconBuilder,
+	AppHandle, Emitter, Manager, State,
+};
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
-use serde_derive::{Deserialize, Serialize};
 
 pub struct Data {
 	pub lcu_client: Option<LcuClient<irelia::requests::RequestClientType>>,
@@ -62,15 +66,15 @@ impl Data {
 #[tauri::command]
 async fn lcu_request(state: State<'_, Arc<Mutex<Data>>>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
 	let state = state.lock().await;
-	
+
 	match &state.lcu_client {
 		Some(client) => match method.to_lowercase().as_str() {
 			"get" => client.get(&path).await.map_err(|e| e.to_string()),
 			"post" => client.post(&path, body.unwrap()).await.map_err(|e| e.to_string()),
 			"put" => client.put(&path, body.unwrap()).await.map_err(|e| e.to_string()),
-			_ => Err("Invalid method".to_string())
+			_ => Err("Invalid method".to_string()),
 		},
-		None => Err("Not connected to League client".to_string())
+		None => Err("Not connected to League client".to_string()),
 	}
 }
 
@@ -120,6 +124,11 @@ async fn get_connected(state: State<'_, Arc<Mutex<Data>>>) -> Result<bool, Strin
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 	tauri::Builder::default()
+		.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+			let main_window = app.get_window("main").unwrap();
+			main_window.show().unwrap();
+			main_window.set_focus().unwrap();
+		}))
 		.setup(|app| {
 			let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 			let show_i = MenuItem::with_id(app, "show", "Show/Hide", true, None::<&str>)?;
@@ -128,12 +137,16 @@ pub fn run() {
 			TrayIconBuilder::new()
 				.on_menu_event(|app, event| match event.id.as_ref() {
 					"quit" => {
-						println!("quit menu item was clicked");
 						app.exit(0);
 					}
 					"show" => {
 						let main_window = app.get_window("main").unwrap();
-						main_window.show().unwrap();
+						if main_window.is_visible().unwrap() {
+							main_window.hide().unwrap();
+						} else {
+							main_window.show().unwrap();
+							main_window.set_focus().unwrap();
+						}
 					}
 					_ => {
 						println!("menu item {:?} not handled", event.id);
@@ -161,7 +174,7 @@ pub fn run() {
 									println!("Successfully connected to League client");
 									state.connected = true;
 									app_handle.emit("connection", true).unwrap();
-								},
+								}
 								Err(e) => println!("{}", e),
 							}
 						} else {
