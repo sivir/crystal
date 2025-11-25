@@ -28,13 +28,13 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: "deno task tauri"
-          tagName: app-v__VERSION__
-          releaseName: "App v__VERSION__"
+          tagName: crystal-v__VERSION__
+          releaseName: "Crystal v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
