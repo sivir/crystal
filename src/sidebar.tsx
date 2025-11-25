@@ -5,7 +5,7 @@ import { page_name } from "@/data_context.tsx";
 import { refresh_data } from "@/App.tsx";
 import { getVersion } from "@tauri-apps/api/app";
 
-import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette, Flame } from "lucide-react";
+import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette, Flame, Globe } from "lucide-react";
 import {
 	Sidebar,
 	SidebarContent, SidebarFooter,
@@ -46,6 +46,11 @@ const items: { title: string, url: page_name, icon: any }[] = [
 		url: "eternals",
 		icon: Flame,
 	},
+	{
+		title: "Team Builder",
+		url: "team_builder",
+		icon: Globe,
+	},
 	// {
 	// 	title: "Settings",
 	// 	url: "settings",
@@ -63,8 +68,8 @@ function ModeToggle() {
 
 	return (
 		<Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-			<Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-			<Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+			<Sun className="h-2 w-2 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+			<Moon className="absolute h-2 w-2 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
 			<span className="sr-only">Toggle theme</span>
 		</Button>
 	)
@@ -94,7 +99,7 @@ async function app_icon(): Promise<string> {
 }
 
 export function AppSidebar() {
-	const {data, setData} = useData();
+	const { data, setData } = useData();
 	const [image_src, set_image_src] = useState<string>("");
 	const [version, setVersion] = useState<string>("");
 
@@ -129,7 +134,7 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{items.map((item) => (
 								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton asChild onClick={() => setData(prev => ({...prev, page: item.url}))}>
+									<SidebarMenuButton asChild onClick={() => setData(prev => ({ ...prev, page: item.url }))}>
 										<a href={"#"}>
 											<item.icon />
 											<span>{item.title}</span>
@@ -141,12 +146,12 @@ export function AppSidebar() {
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="flex items-center flex-row">
+			<SidebarFooter className="flex items-center flex-row gap-1">
 				<ModeToggle />
 				<Button variant="outline" size="icon" onClick={() => refresh_data(setData)}>
-					<RefreshCcw className="h-[1.2rem] w-[1.2rem]"/>
+					<RefreshCcw className="h-2 w-2" />
 				</Button>
-				<Badge variant={data.connected ? "success" : "destructive"} className="ml-2">
+				<Badge variant={data.connected ? "success" : "destructive"}>
 					{data.connected ? "connected" : "disconnected"}
 				</Badge>
 			</SidebarFooter>

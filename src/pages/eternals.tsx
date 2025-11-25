@@ -117,7 +117,6 @@ export default function Eternals() {
 			let total_target = 0;
 
 			eternals_series.forEach(series => {
-				console.log(series.itemId);
 				const metadata_set = data.statstones_map[series.itemId.toString()];
 
 				const eternals: EternalProgress[] = [];
@@ -428,20 +427,20 @@ export default function Eternals() {
 												<span className="text-sm text-muted-foreground">-</span>
 											)}
 										</TableCell>
-								</TableRow>
-								{row.is_expanded && (
-									<TableRow key={`${row.champion_id}-details`}>
-										<TableCell colSpan={6} className="bg-muted/20 p-0">
-											<div className="grid grid-cols-3 gap-4 p-4">
-												{starter_series && render_external_series(starter_series)}
-												{series1 && render_external_series(series1)}
-												{series2 && render_external_series(series2)}
-											</div>
-										</TableCell>
 									</TableRow>
-								)}
-							</>
-						);
+									{row.is_expanded && (
+										<TableRow key={`${row.champion_id}-details`}>
+											<TableCell colSpan={6} className="bg-muted/20 p-0">
+												<div className="grid grid-cols-3 gap-4 p-4">
+													{starter_series && render_external_series(starter_series)}
+													{series1 && render_external_series(series1)}
+													{series2 && render_external_series(series2)}
+												</div>
+											</TableCell>
+										</TableRow>
+									)}
+								</>
+							);
 						})}
 					</TableBody>
 				</Table>

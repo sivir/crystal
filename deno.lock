@@ -12,8 +12,9 @@
     "npm:@radix-ui/react-tabs@^1.1.3": "1.1.3_@types+react@18.3.18_@types+react-dom@18.3.5__@types+react@18.3.18_react@18.3.1_react-dom@18.3.1__react@18.3.1",
     "npm:@radix-ui/react-tooltip@^1.1.7": "1.1.8_@types+react@18.3.18_@types+react-dom@18.3.5__@types+react@18.3.18_react@18.3.1_react-dom@18.3.1__react@18.3.1",
     "npm:@supabase/supabase-js@^2.49.4": "2.49.4",
-    "npm:@tauri-apps/api@2": "2.2.0",
+    "npm:@tauri-apps/api@2": "2.9.0",
     "npm:@tauri-apps/cli@2": "2.2.7",
+    "npm:@tauri-apps/plugin-clipboard-manager@~2.3.2": "2.3.2",
     "npm:@tauri-apps/plugin-opener@2": "2.2.5",
     "npm:@types/node@^22.10.10": "22.10.10",
     "npm:@types/react-dom@^18.3.1": "18.3.5_@types+react@18.3.18",
@@ -1227,8 +1228,8 @@
         "@supabase/storage-js"
       ]
     },
-    "@tauri-apps/api@2.2.0": {
-      "integrity": "sha512-R8epOeZl1eJEl603aUMIGb4RXlhPjpgxbGVEaqY+0G5JG9vzV/clNlzTeqc+NLYXVqXcn8mb4c5b9pJIUDEyAg=="
+    "@tauri-apps/api@2.9.0": {
+      "integrity": "sha512-qD5tMjh7utwBk9/5PrTA/aGr3i5QaJ/Mlt7p8NilQ45WgbifUNPyKWsA63iQ8YfQq6R8ajMapU+/Q8nMcPRLNw=="
     },
     "@tauri-apps/cli-darwin-arm64@2.2.7": {
       "integrity": "sha512-54kcpxZ3X1Rq+pPTzk3iIcjEVY4yv493uRx/80rLoAA95vAC0c//31Whz75UVddDjJfZvXlXZ3uSZ+bnCOnt0A==",
@@ -1295,6 +1296,12 @@
         "@tauri-apps/cli-win32-x64-msvc"
       ],
       "bin": true
+    },
+    "@tauri-apps/plugin-clipboard-manager@2.3.2": {
+      "integrity": "sha512-CUlb5Hqi2oZbcZf4VUyUH53XWPPdtpw43EUpCza5HWZJwxEoDowFzNUDt1tRUXA8Uq+XPn17Ysfptip33sG4eQ==",
+      "dependencies": [
+        "@tauri-apps/api"
+      ]
     },
     "@tauri-apps/plugin-opener@2.2.5": {
       "integrity": "sha512-hHsJ9RPWpZvZEPVFaL+d25gABMUMOf/A6ESXnvf/ii9guTukj58WXsAE/SOysXRIhej7kseRCxnOnIMpSCdUsQ==",
@@ -2537,6 +2544,7 @@
         "npm:@supabase/supabase-js@^2.49.4",
         "npm:@tauri-apps/api@2",
         "npm:@tauri-apps/cli@2",
+        "npm:@tauri-apps/plugin-clipboard-manager@~2.3.2",
         "npm:@tauri-apps/plugin-opener@2",
         "npm:@types/node@^22.10.10",
         "npm:@types/react-dom@^18.3.1",

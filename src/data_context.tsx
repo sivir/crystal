@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useMemo } from "react";
 
-export type page_name = "home" | "lobby" | "profile" | "skins" | "eternals" | "settings" | "debug";
+export type page_name = "home" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug";
 
 export type APIMasteryDataEntry = {
 	championId: number;
@@ -94,6 +94,7 @@ export type StatstonesMap = {
 
 export type APILCUChallenge = {
 	name: string;
+	id: number;
 	description: string;
 	currentValue: number;
 	currentLevel: string;
@@ -106,6 +107,9 @@ export type APILCUChallenge = {
 	levelToIconPath: {
 		[key: string]: string;
 	}
+	isCapstone: boolean;
+	capstoneGroupName: string;
+	availableIds: number[];
 }
 
 export type APILCUChallengeMap = {
@@ -232,15 +236,15 @@ const initial_page_data: PageData = {
 	gameflow_session: null,
 };
 
-const DataContext = createContext<{data: PageData, setData: React.Dispatch<React.SetStateAction<PageData>>}>({
+const DataContext = createContext<{ data: PageData, setData: React.Dispatch<React.SetStateAction<PageData>> }>({
 	data: initial_page_data,
 	setData: () => null,
 });
 
-export function DataProvider({children}: {children: React.ReactNode}) {
+export function DataProvider({ children }: { children: React.ReactNode }) {
 	const [data, setData] = useState<PageData>(initial_page_data);
 	const has_lcu_data = useMemo(() => Object.keys(data.lcu_data).length > 0, [data.lcu_data]);
-	return <DataContext.Provider value={{data: {...data, has_lcu_data}, setData}}>{children}</DataContext.Provider>;
+	return <DataContext.Provider value={{ data: { ...data, has_lcu_data }, setData }}>{children}</DataContext.Provider>;
 }
 
 export function useData() {
