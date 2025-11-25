@@ -19,20 +19,18 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v1
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: install frontend dependencies
-        run: bun install
-
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tauriScript: "deno task tauri"
           tagName: app-v__VERSION__
           releaseName: "App v__VERSION__"
           releaseBody: "See the assets to download this version and install."
