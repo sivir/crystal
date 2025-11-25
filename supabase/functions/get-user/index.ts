@@ -1,6 +1,6 @@
 import { cors_headers, get_user, update_riot_data, riot_api_key, supabase_secret } from '../_shared/update_db.ts';
 
-Deno.serve(async (req)=>{
+Deno.serve(async (req) => {
 	// allow calling from browser
 	if (req.method === 'OPTIONS') {
 		return new Response('ok', {
@@ -65,7 +65,7 @@ Deno.serve(async (req)=>{
 		}
 	} catch (err) {
 		console.error(err);
-		return new Response(String(err?.message ?? err), {
+		return new Response(String(err), {
 			status: 500,
 			headers: cors_headers
 		});

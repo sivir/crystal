@@ -4,9 +4,9 @@
 	"version": "3.6.0",
 	"identifier": "lol.challenges.crystal",
 	"build": {
-		"beforeDevCommand": "deno task dev",
+		"beforeDevCommand": "bun run dev",
 		"devUrl": "http://localhost:1421",
-		"beforeBuildCommand": "deno task build",
+		"beforeBuildCommand": "bun run build",
 		"frontendDist": "../dist"
 	},
 	"app": {
