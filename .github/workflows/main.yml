@@ -33,9 +33,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: crystal-v__VERSION__
-          releaseName: "Crystal v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          tagName: v__VERSION__
+          releaseName: "crystal v__VERSION__"
+          releaseBody: "download below!"
+          uploadPlainBinary: true
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
