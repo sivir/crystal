@@ -1,12 +1,11 @@
 {
-  "name": "tauri-deno-shadcn-tailwind3",
+  "name": "crystal",
   "private": true,
   "version": "3.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "typesafebuild": "tsc && vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"
   },

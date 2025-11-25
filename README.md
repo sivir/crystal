@@ -1,6 +1,6 @@
 # Crystal
 
-warning: this app will run with reduced functionality if you compile it yourself since there is a compile-time secret for function authentication that are not included in this repo, to stop malicious actors from modifying the database. this will be removed later once user's are required to log in via RSO (almost no effort to the user)
+warning: this app won't update mastery points in real time if you compile it yourself since there is a compile-time secret for function authentication that are not included in this repo, to stop malicious actors from modifying the database. this will be removed later once user's are required to log in via RSO (almost no effort to the user)
 
 desktop client to help you keep track of your league challenges! screenshots incoming
 
@@ -35,6 +35,9 @@ flowchart LR
 ```
 
 ## Changelog
+
+0.6.0
+- added team builder
 
 0.5.0
 - added eternals tracker

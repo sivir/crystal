@@ -19,23 +19,20 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v1
-        with:
-          deno-version: v2.x
+      - uses: oven-sh/setup-bun@v1
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
-      
-      - name: install Tauri CLI
-        run: deno install -g --allow-all npm:@tauri-apps/cli
+
+      - name: install frontend dependencies
+        run: bun ci
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tauriScript: "deno task tauri"
           tagName: crystal-v__VERSION__
           releaseName: "Crystal v__VERSION__"
           releaseBody: "See the assets to download this version and install."
