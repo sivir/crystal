@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { challenge_icon, lcu_post_request, lcu_put_request } from "@/lib/utils.ts";
 
-import { useData } from "@/data_context.tsx";
+import { useStaticData } from "@/data_context.tsx";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import APIButton from "@/components/api_button.tsx";
 
 export default function Profile() {
-	const { data } = useData();
+	const { static_data, has_lcu_data } = useStaticData();
 	const [profile_icons, set_profile_icons] = useState<number[]>([0, 0, 0]);
 	const [active_slot, set_active_slot] = useState<number | null>(null);
 	const [text_content, set_text_content] = useState<string>("");
 	const [search_query, set_search_query] = useState<string>("");
 
 	useEffect(() => {
-		if (data.riot_data.preferences) {
-			set_profile_icons(data.riot_data.preferences.challengeIds);
+		if (static_data.riot_data.preferences) {
+			set_profile_icons(static_data.riot_data.preferences.challengeIds);
 		}
-	}, [data.riot_data.preferences]);
+	}, [static_data.riot_data.preferences]);
 
 	const handle_icon_click = (id: number) => {
 		if (active_slot !== null) {
@@ -32,14 +32,14 @@ export default function Profile() {
 	};
 
 	const filtered_challenges = useMemo(() => {
-		const all_challenges = data.riot_data.challenges.map(x => x.challengeId);
+		const all_challenges = static_data.riot_data.challenges.map(x => x.challengeId);
 
 		const query = search_query.toLowerCase().trim();
 		return all_challenges.filter(id => {
-			const name = data.lcu_data[id]?.name || "";
+			const name = static_data.lcu_data[id]?.name || "";
 			return name.toLowerCase().includes(query);
 		});
-	}, [data.riot_data.challenges, search_query]);
+	}, [static_data.riot_data.challenges, search_query]);
 
 	return (
 		<div className="p-6 space-y-6">
@@ -76,7 +76,7 @@ export default function Profile() {
 											</button>
 										</TooltipTrigger>
 										<TooltipContent>
-											<p>{data.lcu_data[id]?.name || `Challenge ${id}`}</p>
+											<p>{static_data.lcu_data[id]?.name || `Challenge ${id}`}</p>
 										</TooltipContent>
 									</Tooltip>
 								))}
@@ -108,7 +108,7 @@ export default function Profile() {
 												</button>
 											</TooltipTrigger>
 											<TooltipContent>
-												<p>{data.lcu_data[id]?.name || `Challenge ${id}`}</p>
+												<p>{static_data.lcu_data[id]?.name || `Challenge ${id}`}</p>
 											</TooltipContent>
 										</Tooltip>
 									))}
@@ -116,7 +116,7 @@ export default function Profile() {
 							</div>
 						)}
 
-						<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
+						<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
 					</CardContent>
 				</Card>
 

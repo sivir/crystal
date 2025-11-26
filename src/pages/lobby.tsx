@@ -1,4 +1,4 @@
-import { useData } from "@/data_context";
+import { useStaticData, useSessionData } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
 import { champion_name, lcu_get_request } from "@/lib/utils.ts";
 
@@ -50,23 +50,24 @@ const queue_ids: Record<number, string> = {
 }
 
 export default function Lobby() {
-	const { data } = useData();
+	const { static_data, has_lcu_data } = useStaticData();
+	const { session_data } = useSessionData();
 	const [crowd_favorites, set_crowd_favorites] = useState<number[]>([]);
 
 	const game_mode = useMemo(() => {
-		if (!data.gameflow_session) {
+		if (!session_data.gameflow_session) {
 			return null;
 		}
-		const queue_id = data.gameflow_session.gameData?.queue?.id ?? 450;
+		const queue_id = session_data.gameflow_session.gameData?.queue?.id ?? 450;
 		return queue_ids[queue_id] ?? null;
-	}, [data.gameflow_session]);
+	}, [session_data.gameflow_session]);
 
-	const arena_champ_select = game_mode === "arena" && data.gameflow_session?.phase == "ChampSelect";
-	const isInAramChampSelect = (game_mode === "aram" || game_mode === "aram-mayhem") && data.gameflow_session?.phase == "ChampSelect";
+	const arena_champ_select = game_mode === "arena" && session_data.gameflow_session?.phase == "ChampSelect";
+	const isInAramChampSelect = (game_mode === "aram" || game_mode === "aram-mayhem") && session_data.gameflow_session?.phase == "ChampSelect";
 	const isAramMayhem = game_mode === "aram-mayhem";
 
 	useEffect(() => {
-		if (arena_champ_select && data.connected) {
+		if (arena_champ_select && static_data.connected) {
 			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list").then((response) => { // typo is intentional
 				console.log("Crowd favorite champions:", response);
 				set_crowd_favorites(response);
@@ -74,19 +75,19 @@ export default function Lobby() {
 		} else {
 			set_crowd_favorites([]);
 		}
-	}, [arena_champ_select, data.connected]);
+	}, [arena_champ_select, static_data.connected]);
 
 	// Get ARAM champions (team + bench)
 	const aram_champions = useMemo<ChampionMasteryDisplay[]>(() => {
-		if (!isInAramChampSelect || !data.champ_select_session) return [];
+		if (!isInAramChampSelect || !session_data.champ_select_session) return [];
 
-		const session = data.champ_select_session;
+		const session = session_data.champ_select_session;
 		const champion_ids = session.myTeam.map((player: APIChampSelectPlayer) => player.championId).concat(session.benchChampions.map((benchChamp: any) => benchChamp.championId)).filter(id => id > 0);
 
-		const aramChallenge = !isAramMayhem ? data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID] : null;
+		const aramChallenge = !isAramMayhem ? static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID] : null;
 
 		return champion_ids.map(championId => {
-			const masteryData = data.mastery_data.find(m => m.championId === championId);
+			const masteryData = static_data.mastery_data.find(m => m.championId === championId);
 			return {
 				championId,
 				masteryLevel: masteryData?.championLevel || 0,
@@ -102,21 +103,21 @@ export default function Lobby() {
 			}
 			return b.masteryPoints - a.masteryPoints;
 		});
-	}, [isInAramChampSelect, data.champ_select_session, data.mastery_data, data.lcu_data, isAramMayhem]);
+	}, [isInAramChampSelect, session_data.champ_select_session, static_data.mastery_data, static_data.lcu_data, isAramMayhem]);
 
 	// Get crowd favorite champions with completion status
 	const crowd_favorite_data = useMemo<CrowdFavoriteChampion[]>(() => {
 		return crowd_favorites.map(championId => ({
 			championId,
-			isCompleted: data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID].completedIds.includes(championId)
+			isCompleted: static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID].completedIds.includes(championId)
 		}));
-	}, [crowd_favorites, data.lcu_data]);
+	}, [crowd_favorites, static_data.lcu_data]);
 
 	return (
 		<div className="p-6 space-y-6">
 			<h1 className="text-3xl font-bold">Lobby</h1>
 
-			{!data.connected && (
+			{!static_data.connected && (
 				<Card>
 					<CardContent className="pt-6">
 						<p className="text-muted-foreground">Not connected to League client</p>
@@ -124,7 +125,7 @@ export default function Lobby() {
 				</Card>
 			)}
 
-			{data.connected && !arena_champ_select && !isInAramChampSelect && (
+			{static_data.connected && !arena_champ_select && !isInAramChampSelect && (
 				<Card>
 					<CardContent className="pt-6">
 						<p className="text-muted-foreground">Not in champion select for Arena or ARAM</p>
@@ -132,15 +133,15 @@ export default function Lobby() {
 				</Card>
 			)}
 
-			{data.connected && arena_champ_select && (
+			{static_data.connected && arena_champ_select && (
 				<Card>
 					<CardHeader>
 						<CardTitle>Arena Crowd Favorites</CardTitle>
 					</CardHeader>
 					<CardContent>
-						{!data.has_lcu_data ? (
+						{!has_lcu_data ? (
 							<p className="text-muted-foreground">Loading challenge data...</p>
-						) : !data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID] ? (
+						) : !static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID] ? (
 							<p className="text-muted-foreground">Challenge data not available</p>
 						) : crowd_favorite_data.length === 0 ? (
 							<p className="text-muted-foreground">
@@ -190,13 +191,13 @@ export default function Lobby() {
 				</Card>
 			)}
 
-			{data.connected && isInAramChampSelect && (
+			{static_data.connected && isInAramChampSelect && (
 				<Card>
 					<CardHeader>
 						<CardTitle>ARAM Champions {isAramMayhem && "(Mayhem)"}</CardTitle>
 					</CardHeader>
 					<CardContent>
-						{!data.has_lcu_data ? (
+						{!has_lcu_data ? (
 							<p className="text-muted-foreground">Loading challenge data...</p>
 						) : aram_champions.length === 0 ? (
 							<p className="text-muted-foreground">

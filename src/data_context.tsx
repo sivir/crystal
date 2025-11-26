@@ -208,7 +208,7 @@ const default_riot_challenge_data: APIRiotData = {
 	challenges: []
 };
 
-export interface PageData {
+export interface StaticData {
 	riot_data: APIRiotData;
 	lcu_data: APILCUChallengeMap;
 	mastery_data: APIMasteryDataEntry[];
@@ -217,12 +217,14 @@ export interface PageData {
 	statstones_map: StatstonesMap;
 	page: page_name;
 	connected: boolean;
-	has_lcu_data: boolean;
+}
+
+interface SessionData {
 	champ_select_session: APIChampSelectSession | null;
 	gameflow_session: APIGameflowSession | null;
 }
 
-const initial_page_data: PageData = {
+const initial_page_data: StaticData = {
 	riot_data: default_riot_challenge_data,
 	lcu_data: {},
 	mastery_data: [],
@@ -231,22 +233,39 @@ const initial_page_data: PageData = {
 	statstones_map: {},
 	page: "home",
 	connected: false,
-	has_lcu_data: false,
+};
+
+const initial_session_data: SessionData = {
 	champ_select_session: null,
 	gameflow_session: null,
 };
 
-const DataContext = createContext<{ data: PageData, setData: React.Dispatch<React.SetStateAction<PageData>> }>({
-	data: initial_page_data,
-	setData: () => null,
+const StaticDataContext = createContext<{ static_data: StaticData, setStaticData: React.Dispatch<React.SetStateAction<StaticData>> }>({
+	static_data: initial_page_data,
+	setStaticData: () => null,
 });
 
-export function DataProvider({ children }: { children: React.ReactNode }) {
-	const [data, setData] = useState<PageData>(initial_page_data);
-	const has_lcu_data = useMemo(() => Object.keys(data.lcu_data).length > 0, [data.lcu_data]);
-	return <DataContext.Provider value={{ data: { ...data, has_lcu_data }, setData }}>{children}</DataContext.Provider>;
+const SessionDataContext = createContext<{ session_data: SessionData, setSessionData: React.Dispatch<React.SetStateAction<SessionData>> }>({
+	session_data: initial_session_data,
+	setSessionData: () => null,
+});
+
+export function StaticDataProvider({ children }: { children: React.ReactNode }) {
+	const [static_data, setStaticData] = useState<StaticData>(initial_page_data);
+	return <StaticDataContext.Provider value={{ static_data, setStaticData }}>{children}</StaticDataContext.Provider>;
 }
 
-export function useData() {
-	return useContext(DataContext);
+export function SessionDataProvider({ children }: { children: React.ReactNode }) {
+	const [session_data, setSessionData] = useState<SessionData>(initial_session_data);
+	return <SessionDataContext.Provider value={{ session_data, setSessionData }}>{children}</SessionDataContext.Provider>;
+}
+
+export function useStaticData() {
+	const context = useContext(StaticDataContext);
+	const has_lcu_data = useMemo(() => Object.keys(context.static_data.lcu_data).length > 0, [context.static_data.lcu_data]);
+	return { ...context, has_lcu_data };
+}
+
+export function useSessionData() {
+	return useContext(SessionDataContext);
 }
