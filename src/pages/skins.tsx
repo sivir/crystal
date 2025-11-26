@@ -529,12 +529,12 @@ export default function Skins() {
 											</Badge>
 										</TableCell>
 										<TableCell className="text-center">
-											<span className="font-semibold text-green-600 dark:text-green-400">
+											<span className="font-semibold">
 												{row.owned_skins.length}
 											</span>
 										</TableCell>
 										<TableCell className="text-center">
-											<span className="font-semibold text-blue-600 dark:text-blue-400">
+											<span className="font-semibold text-green-600 dark:text-green-400">
 												{row.loot_skins.length}
 												{(() => {
 													const owned_loot_count = row.loot_skins.filter(skin => skin.owned).length;
@@ -566,7 +566,6 @@ export default function Skins() {
 										<TableRow key={`${row.champion_id}-details`}>
 											<TableCell colSpan={6} className="bg-muted/30 p-6">
 												<div className="grid grid-cols-3 gap-6">
-													{/* Owned Skins */}
 													<div>
 														<h4 className="font-semibold mb-3 text-green-600 dark:text-green-400">
 															Owned Skins ({row.owned_skins.length})

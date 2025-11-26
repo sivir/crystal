@@ -1,4 +1,4 @@
-import { useStaticData, useSessionData } from "@/data_context";
+import { useStaticData, useSessionData, APIChampSelectPlayer } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
 import { champion_name, lcu_get_request } from "@/lib/utils.ts";
 
@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, X } from "lucide-react";
-import { APIChampSelectPlayer } from "@/data_context";
 
 const ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID = 602002; // arena (win on all champs)
 const ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID = 101301; // aram (s- or better on all champs)
