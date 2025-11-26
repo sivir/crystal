@@ -19,10 +19,10 @@ const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
 
 type ChampionTableRow = {
 	name: string;
+	id: number;
 	roles: string[];
 	mastery_level: number;
 	mastery_points: number;
-	icon_url: string;
 	points_since_last_level: number;
 	points_until_next_level: number;
 	checks: boolean[];
@@ -73,10 +73,10 @@ export default function Champions() {
 			const current_mastery_data = static_data.mastery_data.find(x => x.championId === parseInt(id)) || default_mastery_data;
 			return {
 				name: champion.name,
+				id: parseInt(id),
 				roles: champion.roles,
 				mastery_level: current_mastery_data.championLevel,
 				mastery_points: current_mastery_data.championPoints,
-				icon_url: champion.squarePortraitPath,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
 				points_until_next_level: current_mastery_data.championPointsUntilNextLevel,
 				checks: tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds.includes(parseInt(id)))
@@ -330,7 +330,7 @@ export default function Champions() {
 					<TableBody>
 						{filtered_table_data.map((item, i) => (
 							<TableRow key={i} className={catch_em_all > 0 && item.mastery_points >= catch_em_all ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
-								<TableCell>{item.name}</TableCell>
+								<TableCell className="flex items-center gap-2"><img src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${item.id}.png`} alt="icon" className="w-6 h-6" /> {item.name}</TableCell>
 								<TableCell>
 									{item.roles.map((role, j) => (
 										<Badge variant="outline" key={j}>{role}</Badge>

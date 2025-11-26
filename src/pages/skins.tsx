@@ -62,6 +62,11 @@ type SkinDataSummary = {
 		loot_contribution: number;
 		requirement: number;
 	},
+	victorious: {
+		current: number;
+		loot_contribution: number;
+		requirement: number;
+	},
 	legacy: {
 		current: number;
 		loot_contribution: number;
@@ -99,14 +104,14 @@ type SkinDataSummary = {
 	},
 };
 
-type SortKey = "champion" | "total" | "owned" | "owned_plus_loot";
+type SortKey = "champion" | "total" | "owned" | "loot" | "owned_plus_loot" | "unowned";
 
 export default function Skins() {
 	const { static_data } = useStaticData();
 	const [all_skins_api, set_all_skins_api] = useState<APIMinimalSkin[]>([]);
 	const [loot_data_api, set_loot_data_api] = useState<APILootData["playerLoot"]>({});
 	const [loading, set_loading] = useState<boolean>(true);
-	const [sort_key, set_sort_key] = useState<SortKey>("total");
+	const [sort_key, set_sort_key] = useState<SortKey>("owned");
 	const [sort_direction, set_sort_direction] = useState<SortDirection>("desc");
 	const [table_data, set_table_data] = useState<ChampionSkinRow[]>([]);
 
@@ -203,6 +208,12 @@ export default function Skins() {
 				case "owned":
 					comparison = a.owned_skins.length - b.owned_skins.length;
 					break;
+				case "loot":
+					comparison = a.loot_skins.length - b.loot_skins.length;
+					break;
+				case "unowned":
+					comparison = a.unowned_skins.length - b.unowned_skins.length;
+					break;
 				case "owned_plus_loot":
 					// Only count unowned loot skins
 					const a_unowned_loot = a.loot_skins.filter(s => !s.owned).length;
@@ -248,6 +259,7 @@ export default function Skins() {
 		const challenge_ids = {
 			total: 510001,
 			legacy: 510005,
+			victorious: 510006,
 			epic: 510010,
 			legendary: 510009,
 			mythic: 510008,
@@ -300,6 +312,11 @@ export default function Skins() {
 				current: static_data.lcu_data[challenge_ids.total].currentValue,
 				loot_contribution: loot_contribution_total,
 				requirement: static_data.lcu_data[challenge_ids.total].thresholds.MASTER.value,
+			},
+			victorious: {
+				current: static_data.lcu_data[challenge_ids.victorious].currentValue,
+				loot_contribution: 0,
+				requirement: static_data.lcu_data[challenge_ids.victorious].thresholds.MASTER.value,
 			},
 			legacy: {
 				current: static_data.lcu_data[challenge_ids.legacy].currentValue,
@@ -393,12 +410,12 @@ export default function Skins() {
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-							<div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-								<p className="text-xs text-muted-foreground mb-1">Ultimate</p>
-								<p className="text-sm font-semibold text-orange-500">
-									{skin_data_summary.ultimate.current}
-									{skin_data_summary.ultimate.loot_contribution > 0 && (
+					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+						<div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+							<p className="text-xs text-muted-foreground mb-1">Ultimate</p>
+							<p className="text-sm font-semibold text-orange-500">
+								{skin_data_summary.ultimate.current}
+								{skin_data_summary.ultimate.loot_contribution > 0 && (
 										<span className="text-green-600 dark:text-green-400"> +{skin_data_summary.ultimate.loot_contribution}</span>
 									)}
 									<span className="text-muted-foreground"> = {skin_data_summary.ultimate.current + skin_data_summary.ultimate.loot_contribution}</span>
@@ -449,9 +466,14 @@ export default function Skins() {
 									<span className="text-muted-foreground"> / {skin_data_summary.legacy.requirement}</span>
 								</p>
 							</div>
+							<div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+								<p className="text-xs text-muted-foreground mb-1">Victorious</p>
+								<p className="text-sm font-semibold text-green-600 dark:text-green-500">
+									{skin_data_summary.victorious.current}
+									<span className="text-muted-foreground"> / {skin_data_summary.victorious.requirement}</span>
+								</p>
+							</div>
 						</div>
-
-
 					</CardContent>
 				</Card>
 			)}
@@ -460,35 +482,23 @@ export default function Skins() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50"
-								onClick={() => handle_sort("champion")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handle_sort("champion")}>
 								Champion <SortIcon column_key="champion" />
 							</TableHead>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50 text-center"
-								onClick={() => handle_sort("total")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("total")}>
 								Total Skins <SortIcon column_key="total" />
 							</TableHead>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50 text-center"
-								onClick={() => handle_sort("owned")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("owned")}>
 								Owned <SortIcon column_key="owned" />
 							</TableHead>
-							<TableHead className="text-center">
-								In Loot
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("loot")}>
+								In Loot <SortIcon column_key="loot" />
 							</TableHead>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50 text-center"
-								onClick={() => handle_sort("owned_plus_loot")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("owned_plus_loot")}>
 								Owned + Loot <SortIcon column_key="owned_plus_loot" />
 							</TableHead>
-							<TableHead className="text-center">
-								Unowned
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("unowned")}>
+								Unowned <SortIcon column_key="unowned" />
 							</TableHead>
 						</TableRow>
 					</TableHeader>
