@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { lcu_get_request, SortDirection } from "@/lib/utils";
+import { lcu_get_request, SortDirection, classes } from "@/lib/utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,6 @@ import { Input } from "@/components/ui/input";
 import { FilterDropdown } from "@/components/filter_dropdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-
-const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
 
 type APIEternalsSeries = {
 	itemId: number;

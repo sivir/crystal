@@ -57,7 +57,7 @@ export default function Lobby() {
 		if (!session_data.gameflow_session) {
 			return null;
 		}
-		const queue_id = session_data.gameflow_session.gameData?.queue?.id ?? 450;
+		const queue_id = session_data.gameflow_session.gameData?.queue?.id ?? -1;
 		return queue_ids[queue_id] ?? null;
 	}, [session_data.gameflow_session]);
 
