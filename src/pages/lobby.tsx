@@ -166,10 +166,10 @@ export default function Lobby() {
 														<div className="flex items-center gap-2">
 															<img
 																src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champion_id}.png`}
-																alt={champion_name(champion_id)}
+																alt={champion_name(champion_id, static_data.champion_map)}
 																className="w-8 h-8 rounded"
 															/>
-															<span>{champion_name(champion_id)}</span>
+															<span>{champion_name(champion_id, static_data.champion_map)}</span>
 														</div>
 													</TableCell>
 													<TableCell className="text-center">
@@ -226,10 +226,10 @@ export default function Lobby() {
 														<div className="flex items-center gap-2">
 															<img
 																src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champ.champion_id}.png`}
-																alt={champion_name(champ.champion_id)}
+																alt={champion_name(champ.champion_id, static_data.champion_map)}
 																className="w-8 h-8 rounded"
 															/>
-															<span>{champion_name(champ.champion_id)}</span>
+															<span>{champion_name(champ.champion_id, static_data.champion_map)}</span>
 														</div>
 													</TableCell>
 													<TableCell>
