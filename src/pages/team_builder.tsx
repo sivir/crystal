@@ -1,17 +1,16 @@
 import { APILCUChallenge, useStaticData } from "@/data_context";
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { challenge_icon, classes } from "@/lib/utils";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { challenge_icon } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 
-const ROLES = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
 const VARIETYS_OVERRATED_ID = 303408;
 
 export default function TeamBuilder() {
@@ -106,7 +105,7 @@ export default function TeamBuilder() {
 										<SelectValue placeholder="Select Role" />
 									</SelectTrigger>
 									<SelectContent>
-										{ROLES.map((role) => (
+										{classes.map((role) => (
 											<SelectItem key={role} value={role}>
 												{role}
 											</SelectItem>
