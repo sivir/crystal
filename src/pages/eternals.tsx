@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useData } from "@/data_context";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useStaticData } from "@/data_context";
 import { lcu_get_request, SortDirection } from "@/lib/utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -65,7 +65,7 @@ type ChampionEternalsRow = {
 type SortKey = "champion" | "starter" | "series1" | "series2";
 
 export default function Eternals() {
-	const { data } = useData();
+	const { static_data } = useStaticData();
 	const [eternals_data, set_eternals_data] = useState<Map<number, APIEternalsData>>(new Map());
 	const [table_data, set_table_data] = useState<ChampionEternalsRow[]>([]);
 	const [loading, set_loading] = useState<boolean>(true);
@@ -76,10 +76,10 @@ export default function Eternals() {
 	const [hide_completed, set_hide_completed] = useState<boolean>(false);
 
 	useEffect(() => {
-		if (data.connected && Object.keys(data.champion_map).length > 0) {
+		if (static_data.connected && Object.keys(static_data.champion_map).length > 0) {
 			set_loading(true);
 
-			const promises = Object.keys(data.champion_map).map(champion_id => {
+			const promises = Object.keys(static_data.champion_map).map(champion_id => {
 				return lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
 					return { champion_id: parseInt(champion_id), eternals };
 				});
@@ -94,10 +94,10 @@ export default function Eternals() {
 				set_loading(false);
 			});
 		}
-	}, [data.connected, data.champion_map]);
+	}, [static_data.connected, static_data.champion_map]);
 
 	useEffect(() => {
-		const new_table_data = Object.entries(data.champion_map).map(([champion_id_str, champion]) => {
+		const new_table_data = Object.entries(static_data.champion_map).map(([champion_id_str, champion]) => {
 			const champion_id = parseInt(champion_id_str);
 			const eternals_series = eternals_data.get(champion_id);
 
@@ -117,7 +117,7 @@ export default function Eternals() {
 			let total_target = 0;
 
 			eternals_series.forEach(series => {
-				const metadata_set = data.statstones_map[series.itemId.toString()];
+				const metadata_set = static_data.statstones_map[series.itemId.toString()];
 
 				const eternals: EternalProgress[] = [];
 				let series_current = 0;
@@ -175,7 +175,7 @@ export default function Eternals() {
 		});
 
 		set_table_data(new_table_data);
-	}, [data.champion_map, eternals_data, data.statstones_map]);
+	}, [static_data.champion_map, eternals_data, static_data.statstones_map]);
 
 	const sorted_data = useMemo(() => {
 		return [...table_data].sort((a, b) => {
@@ -357,8 +357,8 @@ export default function Eternals() {
 							const series2 = row.series.find(s => s.series_name.toLowerCase().includes("2"));
 
 							return (
-								<>
-									<TableRow key={row.champion_id} className="cursor-pointer hover:bg-muted/50" onClick={() => toggle_row(row.champion_id)}>
+								<Fragment key={row.champion_id}>
+									<TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggle_row(row.champion_id)}>
 										<TableCell>
 											{row.is_expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
 										</TableCell>
@@ -439,7 +439,7 @@ export default function Eternals() {
 											</TableCell>
 										</TableRow>
 									)}
-								</>
+								</Fragment>
 							);
 						})}
 					</TableBody>

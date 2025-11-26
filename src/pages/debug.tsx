@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useData } from "@/data_context";
+import { useStaticData, useSessionData } from "@/data_context";
 import { invoke } from "@tauri-apps/api/core";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export default function Debug() {
-	const { data } = useData();
+	const { static_data } = useStaticData();
+	const { session_data } = useSessionData();
 	const [path, set_path] = useState<string>("");
 	const [request_body, set_request_body] = useState<string>("{}");
 	const [response, set_response] = useState<string>("");
@@ -45,7 +46,7 @@ export default function Debug() {
 
 	return (
 		<div className="container p-6">
-			{!data.connected && (
+			{!static_data.connected && (
 				<Alert variant="destructive" className="mb-4">
 					<AlertCircle className="h-4 w-4" />
 					<AlertDescription>
@@ -54,7 +55,7 @@ export default function Debug() {
 				</Alert>
 			)}
 
-			gameflow phase: {data.gameflow_session?.phase}, queue id: {data.gameflow_session?.gameData?.queue?.id}
+			gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}
 
 			<Card>
 				<CardHeader>
@@ -83,7 +84,7 @@ export default function Debug() {
 							</TabsList>
 
 							<TabsContent value="get">
-								<Button onClick={() => handleRequest("get")} disabled={loading || !data.connected}>
+								<Button onClick={() => handleRequest("get")} disabled={loading || !static_data.connected}>
 									{loading ? "Loading..." : "Send GET Request"}
 								</Button>
 							</TabsContent>
@@ -98,7 +99,7 @@ export default function Debug() {
 										rows={5}
 									/>
 								</div>
-								<Button onClick={() => handleRequest("post")} disabled={loading || !data.connected}>
+								<Button onClick={() => handleRequest("post")} disabled={loading || !static_data.connected}>
 									{loading ? "Loading..." : "Send POST Request"}
 								</Button>
 							</TabsContent>
@@ -113,7 +114,7 @@ export default function Debug() {
 										rows={5}
 									/>
 								</div>
-								<Button onClick={() => handleRequest("put")} disabled={loading || !data.connected}>
+								<Button onClick={() => handleRequest("put")} disabled={loading || !static_data.connected}>
 									{loading ? "Loading..." : "Send PUT Request"}
 								</Button>
 							</TabsContent>

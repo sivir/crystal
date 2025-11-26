@@ -1,21 +1,16 @@
 import { ReactElement } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useData } from "@/data_context.tsx";
+import { useStaticData } from "@/data_context.tsx";
 
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/sidebar";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbList,
-	BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { X, Square, Minus } from "lucide-react";
 import { Button } from "./components/ui/button";
 
 export default function Layout({ children }: { children: ReactElement }) {
-	const {data} = useData();
+	const {static_data} = useStaticData();
 	return (
 		<SidebarProvider className="overflow-hidden">
 			<AppSidebar />
@@ -28,7 +23,7 @@ export default function Layout({ children }: { children: ReactElement }) {
 							<Breadcrumb>
 								<BreadcrumbList>
 									<BreadcrumbItem>
-										<BreadcrumbPage>{data.page}</BreadcrumbPage>
+										<BreadcrumbPage>{static_data.page}</BreadcrumbPage>
 									</BreadcrumbItem>
 								</BreadcrumbList>
 							</Breadcrumb>

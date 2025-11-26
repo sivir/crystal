@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useData } from "@/data_context";
+import { useStaticData } from "@/data_context";
 import { lcu_get_request, SortDirection } from "@/lib/utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -102,7 +102,7 @@ type SkinDataSummary = {
 type SortKey = "champion" | "total" | "owned" | "owned_plus_loot";
 
 export default function Skins() {
-	const { data } = useData();
+	const { static_data } = useStaticData();
 	const [all_skins_api, set_all_skins_api] = useState<APIMinimalSkin[]>([]);
 	const [loot_data_api, set_loot_data_api] = useState<APILootData["playerLoot"]>({});
 	const [loading, set_loading] = useState<boolean>(true);
@@ -111,7 +111,7 @@ export default function Skins() {
 	const [table_data, set_table_data] = useState<ChampionSkinRow[]>([]);
 
 	useEffect(() => {
-		if (data.connected && Object.keys(data.champion_map).length > 0) {
+		if (static_data.connected && Object.keys(static_data.champion_map).length > 0) {
 			set_loading(true);
 			const skins_promise = lcu_get_request<APICurrentSummoner>("/lol-summoner/v1/current-summoner").then(current_summoner => {
 				lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${current_summoner.summonerId}/skins-minimal`).then(skins => {
@@ -125,7 +125,7 @@ export default function Skins() {
 				set_loading(false);
 			});
 		}
-	}, [data.connected, data.champion_map]);
+	}, [static_data.connected, static_data.champion_map]);
 
 	const all_skins = useMemo<Skin[]>(() => {
 		const loot_skin_ids = new Set<number>();
@@ -134,7 +134,7 @@ export default function Skins() {
 		});
 
 		return all_skins_api.map(skin => {
-			const metadata = data.skin_map[skin.id.toString()];
+			const metadata = static_data.skin_map[skin.id.toString()];
 			return {
 				id: skin.id,
 				name: metadata?.name || `Skin ${skin.id}`,
@@ -146,7 +146,7 @@ export default function Skins() {
 				in_loot: loot_skin_ids.has(skin.id),
 			};
 		});
-	}, [all_skins_api, loot_data_api, data.skin_map]);
+	}, [all_skins_api, loot_data_api, static_data.skin_map]);
 
 	const owned_skins = useMemo<Skin[]>(() => {
 		return all_skins.filter(skin => skin.owned && !skin.is_base);
@@ -167,7 +167,7 @@ export default function Skins() {
 	}, [all_skins]);
 
 	useEffect(() => {
-		const new_data = Object.entries(data.champion_map).map(([champion_id_str, champion]) => {
+		const new_data = Object.entries(static_data.champion_map).map(([champion_id_str, champion]) => {
 			const champion_id = parseInt(champion_id_str);
 			const champion_owned = owned_skins.filter(skin => skin.champion_id === champion_id);
 			const champion_all_loot = all_loot_skins.filter(skin => skin.champion_id === champion_id);
@@ -187,7 +187,7 @@ export default function Skins() {
 			};
 		});
 		set_table_data(new_data);
-	}, [data.champion_map, all_skins, owned_skins, all_loot_skins, unowned_skins]);
+	}, [static_data.champion_map, all_skins, owned_skins, all_loot_skins, unowned_skins]);
 
 	const sorted_data = useMemo(() => {
 		return [...table_data].sort((a, b) => {
@@ -243,7 +243,7 @@ export default function Skins() {
 	};
 
 	const skin_data_summary = useMemo<SkinDataSummary | null>(() => {
-		if (Object.keys(data.skin_map).length === 0 || all_skins.length === 0) return null;
+		if (Object.keys(static_data.skin_map).length === 0 || all_skins.length === 0) return null;
 
 		const challenge_ids = {
 			total: 510001,
@@ -278,7 +278,7 @@ export default function Skins() {
 		let champions_5plus_after_loot = 0;
 		let max_champion_total = 0;
 
-		Object.keys(data.champion_map).forEach(champion_id => {
+		Object.keys(static_data.champion_map).forEach(champion_id => {
 			const owned = champion_owned_counts.get(parseInt(champion_id)) || 0;
 			const loot = champion_loot_counts.get(parseInt(champion_id)) || 0;
 			const total = owned + loot;
@@ -292,52 +292,52 @@ export default function Skins() {
 			}
 		});
 
-		const current_champions_5plus = data.lcu_data[challenge_ids.champions_5plus].currentValue;
+		const current_champions_5plus = static_data.lcu_data[challenge_ids.champions_5plus].currentValue;
 		const loot_contribution_champions_5plus = champions_5plus_after_loot - current_champions_5plus;
 
 		return {
 			total: {
-				current: data.lcu_data[challenge_ids.total].currentValue,
+				current: static_data.lcu_data[challenge_ids.total].currentValue,
 				loot_contribution: loot_contribution_total,
-				requirement: data.lcu_data[challenge_ids.total].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.total].thresholds.MASTER.value,
 			},
 			legacy: {
-				current: data.lcu_data[challenge_ids.legacy].currentValue,
+				current: static_data.lcu_data[challenge_ids.legacy].currentValue,
 				loot_contribution: loot_contribution_legacy,
-				requirement: data.lcu_data[challenge_ids.legacy].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.legacy].thresholds.MASTER.value,
 			},
 			epic: {
-				current: data.lcu_data[challenge_ids.epic].currentValue,
+				current: static_data.lcu_data[challenge_ids.epic].currentValue,
 				loot_contribution: loot_contribution_epic,
-				requirement: data.lcu_data[challenge_ids.epic].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.epic].thresholds.MASTER.value,
 			},
 			legendary: {
-				current: data.lcu_data[challenge_ids.legendary].currentValue,
+				current: static_data.lcu_data[challenge_ids.legendary].currentValue,
 				loot_contribution: loot_contribution_legendary,
-				requirement: data.lcu_data[challenge_ids.legendary].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.legendary].thresholds.MASTER.value,
 			},
 			mythic: {
-				current: data.lcu_data[challenge_ids.mythic].currentValue,
+				current: static_data.lcu_data[challenge_ids.mythic].currentValue,
 				loot_contribution: loot_contribution_mythic,
-				requirement: data.lcu_data[challenge_ids.mythic].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.mythic].thresholds.MASTER.value,
 			},
 			ultimate: {
-				current: data.lcu_data[challenge_ids.ultimate].currentValue,
+				current: static_data.lcu_data[challenge_ids.ultimate].currentValue,
 				loot_contribution: loot_contribution_ultimate,
-				requirement: data.lcu_data[challenge_ids.ultimate].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.ultimate].thresholds.MASTER.value,
 			},
 			champions_5plus: {
 				current: current_champions_5plus,
 				loot_contribution: loot_contribution_champions_5plus,
-				requirement: data.lcu_data[challenge_ids.champions_5plus].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.champions_5plus].thresholds.MASTER.value,
 			},
 			champions_15plus: {
-				current: data.lcu_data[challenge_ids.champions_15plus].currentValue,
+				current: static_data.lcu_data[challenge_ids.champions_15plus].currentValue,
 				loot_contribution: max_champion_total,
-				requirement: data.lcu_data[challenge_ids.champions_15plus].thresholds.MASTER.value,
+				requirement: static_data.lcu_data[challenge_ids.champions_15plus].thresholds.MASTER.value,
 			},
 		};
-	}, [data.skin_map, all_skins, owned_skins, loot_skins, data.lcu_data]);
+	}, [static_data.skin_map, all_skins, owned_skins, loot_skins, static_data.lcu_data]);
 
 	const SortIcon = ({ column_key }: { column_key: SortKey }) => {
 		if (sort_key !== column_key) return null;
@@ -529,12 +529,12 @@ export default function Skins() {
 											</Badge>
 										</TableCell>
 										<TableCell className="text-center">
-											<span className="font-semibold text-green-600 dark:text-green-400">
+											<span className="font-semibold">
 												{row.owned_skins.length}
 											</span>
 										</TableCell>
 										<TableCell className="text-center">
-											<span className="font-semibold text-blue-600 dark:text-blue-400">
+											<span className="font-semibold text-green-600 dark:text-green-400">
 												{row.loot_skins.length}
 												{(() => {
 													const owned_loot_count = row.loot_skins.filter(skin => skin.owned).length;
@@ -566,7 +566,6 @@ export default function Skins() {
 										<TableRow key={`${row.champion_id}-details`}>
 											<TableCell colSpan={6} className="bg-muted/30 p-6">
 												<div className="grid grid-cols-3 gap-6">
-													{/* Owned Skins */}
 													<div>
 														<h4 className="font-semibold mb-3 text-green-600 dark:text-green-400">
 															Owned Skins ({row.owned_skins.length})

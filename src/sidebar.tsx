@@ -1,6 +1,6 @@
 import { app } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import { useData } from "@/data_context.tsx";
+import { useStaticData } from "@/data_context.tsx";
 import { page_name } from "@/data_context.tsx";
 import { refresh_data } from "@/App.tsx";
 import { getVersion } from "@tauri-apps/api/app";
@@ -99,7 +99,7 @@ async function app_icon(): Promise<string> {
 }
 
 export function AppSidebar() {
-	const { data, setData } = useData();
+	const { static_data, setStaticData } = useStaticData();
 	const [image_src, set_image_src] = useState<string>("");
 	const [version, setVersion] = useState<string>("");
 
@@ -134,7 +134,7 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{items.map((item) => (
 								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton asChild onClick={() => setData(prev => ({ ...prev, page: item.url }))}>
+									<SidebarMenuButton asChild onClick={() => setStaticData(prev => ({ ...prev, page: item.url }))}>
 										<a href={"#"}>
 											<item.icon />
 											<span>{item.title}</span>
@@ -148,11 +148,11 @@ export function AppSidebar() {
 			</SidebarContent>
 			<SidebarFooter className="flex items-center flex-row gap-1">
 				<ModeToggle />
-				<Button variant="outline" size="icon" onClick={() => refresh_data(setData)}>
+				<Button variant="outline" size="icon" onClick={() => refresh_data(setStaticData)}>
 					<RefreshCcw className="h-2 w-2" />
 				</Button>
-				<Badge variant={data.connected ? "success" : "destructive"}>
-					{data.connected ? "connected" : "disconnected"}
+				<Badge variant={static_data.connected ? "success" : "destructive"}>
+					{static_data.connected ? "connected" : "disconnected"}
 				</Badge>
 			</SidebarFooter>
 		</Sidebar>

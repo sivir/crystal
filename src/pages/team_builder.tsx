@@ -1,4 +1,4 @@
-import { APILCUChallenge, useData } from "@/data_context";
+import { APILCUChallenge, useStaticData } from "@/data_context";
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
@@ -15,12 +15,12 @@ const ROLES = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
 const VARIETYS_OVERRATED_ID = 303408;
 
 export default function TeamBuilder() {
-	const { data } = useData();
+	const { static_data } = useStaticData();
 	const [selected_challenges, set_selected_challenges] = useState<number[]>([]);
 	const [selected_role, set_selected_role] = useState<string>("Mage");
 
-	const harmony_challenges = useMemo(() => Object.values(data.lcu_data).filter((c) => c.capstoneGroupName === "Harmony" && !c.isCapstone), [data.lcu_data]);
-	const globetrotter_challenges = useMemo(() => Object.values(data.lcu_data).filter((c) => c.capstoneGroupName === "Globetrotter" && !c.isCapstone), [data.lcu_data]);
+	const harmony_challenges = useMemo(() => Object.values(static_data.lcu_data).filter((c) => c.capstoneGroupName === "Harmony" && !c.isCapstone), [static_data.lcu_data]);
+	const globetrotter_challenges = useMemo(() => Object.values(static_data.lcu_data).filter((c) => c.capstoneGroupName === "Globetrotter" && !c.isCapstone), [static_data.lcu_data]);
 
 	const toggle_challenge = (id: number) => {
 		set_selected_challenges((prev) =>
@@ -29,13 +29,13 @@ export default function TeamBuilder() {
 	};
 
 	const filtered_champions = useMemo(() => {
-		const all_champions = Object.values(data.champion_map);
+		const all_champions = Object.values(static_data.champion_map);
 
 		if (selected_challenges.length === 0) {
 			return all_champions.map(c => ({ ...c, is_filtered: false }));
 		}
 
-		const selected_challenge_objects = selected_challenges.map(id => Object.values(data.lcu_data).find(c => c.id === id)).filter(x => x);
+		const selected_challenge_objects = selected_challenges.map(id => Object.values(static_data.lcu_data).find(c => c.id === id)).filter(x => x);
 
 		return all_champions.map(champion => {
 			const is_available = selected_challenge_objects.every(challenge => {
@@ -50,7 +50,7 @@ export default function TeamBuilder() {
 
 			return { ...champion, is_filtered: !is_available };
 		});
-	}, [data.champion_map, harmony_challenges, globetrotter_challenges, selected_challenges, selected_role]);
+	}, [static_data.champion_map, harmony_challenges, globetrotter_challenges, selected_challenges, selected_role]);
 
 	const sorted_champions = useMemo(() => {
 		return [...filtered_champions].sort((a, b) => {

@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { invoke } from "@tauri-apps/api/core";
-import { useData } from "@/data_context.tsx";
+import { useStaticData } from "@/data_context.tsx";
 import { createClient } from "@supabase/supabase-js";
 
 export function cn(...inputs: ClassValue[]) {
@@ -17,11 +17,11 @@ export async function supabase_invoke<t>(function_name: string, body: any) {
 }
 
 export function challenge_icon(id: number, level: string | null = null) {
-	const { data } = useData();
-	if (id < 10 || data.lcu_data[id] === undefined || data.lcu_data[id].currentLevel === "NONE") {
+	const { static_data } = useStaticData();
+	if (id < 10 || static_data.lcu_data[id] === undefined || static_data.lcu_data[id].currentLevel === "NONE") {
 		return "https://placehold.co/32?text=" + id;
 	}
-	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${data.lcu_data[id]?.levelToIconPath[level ?? data.lcu_data[id].currentLevel].substring(40).toLowerCase()}`;
+	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${static_data.lcu_data[id]?.levelToIconPath[level ?? static_data.lcu_data[id].currentLevel].substring(40).toLowerCase()}`;
 }
 
 export type SortDirection = "asc" | "desc";
@@ -39,6 +39,6 @@ export async function lcu_put_request<t>(path: string, body: any) {
 }
 
 export function champion_name(id: number) {
-	const { data } = useData();
-	return data.champion_map[id]?.name || `Champion ${id}`;
+	const { static_data } = useStaticData();
+	return static_data.champion_map[id]?.name || `Champion ${id}`;
 }

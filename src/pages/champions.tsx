@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { APIMasteryDataEntry, useData } from "@/data_context.tsx";
+import { APIMasteryDataEntry, useStaticData } from "@/data_context.tsx";
 import { challenge_icon, SortDirection } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +61,7 @@ function mastery_color(level: number): string {
 }
 
 export default function Champions() {
-	const { data } = useData();
+	const { static_data, has_lcu_data } = useStaticData();
 	const [champion_table_data, set_champion_table_data] = useState<ChampionTableRow[]>([]);
 	const [selected_roles, set_selected_roles] = useState<string[]>([]);
 	const [search, set_search] = useState<string>('');
@@ -71,8 +71,8 @@ export default function Champions() {
 	const [selected_challenges, set_selected_challenges] = useState(tracked_challenges);
 
 	useEffect(() => {
-		set_champion_table_data(Object.entries(data.champion_map).map(([id, champion]) => {
-			const current_mastery_data = data.mastery_data.find(x => x.championId === parseInt(id)) || default_mastery_data;
+		set_champion_table_data(Object.entries(static_data.champion_map).map(([id, champion]) => {
+			const current_mastery_data = static_data.mastery_data.find(x => x.championId === parseInt(id)) || default_mastery_data;
 			return {
 				name: champion.name,
 				roles: champion.roles,
@@ -81,10 +81,10 @@ export default function Champions() {
 				icon_url: champion.squarePortraitPath,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
 				points_until_next_level: current_mastery_data.championPointsUntilNextLevel,
-				checks: tracked_challenges.map(x => data.lcu_data[x]?.completedIds.includes(parseInt(id)))
+				checks: tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds.includes(parseInt(id)))
 			};
 		}));
-	}, [data.champion_map, data.mastery_data, data.lcu_data]);
+	}, [static_data.champion_map, static_data.mastery_data, static_data.lcu_data]);
 
 	const sorted_table_data = useMemo(() => {
 		return [...champion_table_data].sort((a, b) => {
@@ -111,12 +111,6 @@ export default function Champions() {
 		});
 	}, [champion_table_data, sort_field, sort_direction]);
 
-	useEffect(() => {
-		if (Object.keys(data.lcu_data).length === 0) {
-			return;
-		}
-	}, [data.lcu_data]);
-
 	const filtered_table_data = useMemo(() => {
 		return sorted_table_data.filter(item => {
 			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.map(x => x.toLowerCase()).includes(role));
@@ -127,10 +121,10 @@ export default function Champions() {
 	}, [sorted_table_data, selected_roles, search]);
 
 	const catch_em_all = useMemo(() => {
-		if (!data.has_lcu_data) {
+		if (!has_lcu_data) {
 			return -1;
 		}
-		return data.lcu_data[401101].currentValue;
+		return static_data.lcu_data[401101].currentValue;
 	}, [filtered_table_data]);
 
 	return (
@@ -147,16 +141,16 @@ export default function Champions() {
 						}} className="min-h-[100px]">
 							<div className="flex flex-wrap">
 								{classes.map((class_name, index) => {
-									if (!data.has_lcu_data) {
+									if (!has_lcu_data) {
 										return null;
 									}
 
-									const m7_thresholds = Object.entries(data.lcu_data[m7_challenges[index]].thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
-									const m10_thresholds = Object.entries(data.lcu_data[m10_challenges[index]].thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
-									const m7_current = data.lcu_data[m7_challenges[index]].currentValue;
-									const m10_current = data.lcu_data[m10_challenges[index]].currentValue;
-									const m7_max = data.lcu_data[m7_challenges[index]].thresholds["MASTER"].value;
-									//const m10_max = data.lcu_data[m10_challenges[index]].thresholds["MASTER"].value;
+									const m7_thresholds = Object.entries(static_data.lcu_data[m7_challenges[index]].thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
+									const m10_thresholds = Object.entries(static_data.lcu_data[m10_challenges[index]].thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
+									const m7_current = static_data.lcu_data[m7_challenges[index]].currentValue;
+									const m10_current = static_data.lcu_data[m10_challenges[index]].currentValue;
+									const m7_max = static_data.lcu_data[m7_challenges[index]].thresholds["MASTER"].value;
+									//const m10_max = static_data.lcu_data[m10_challenges[index]].thresholds["MASTER"].value;
 
 									const chart_data = [{
 										name: class_name,
@@ -310,7 +304,7 @@ export default function Champions() {
 						items={tracked_challenges}
 						selected_items={selected_challenges}
 						set_selected_items={set_selected_challenges}
-						item_to_label={(item: number) => data.lcu_data[item].name}
+						item_to_label={(item: number) => static_data.lcu_data[item].name}
 					/>
 				</div>
 			</div>
@@ -329,7 +323,7 @@ export default function Champions() {
 										<img src={challenge_icon(x)} alt="icon" className="w-6 h-6" />
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>{data.lcu_data[x].description} ({data.lcu_data[x].completedIds.length} / {Object.keys(data.champion_map).length})</p>
+										<p>{static_data.lcu_data[x].description} ({static_data.lcu_data[x].completedIds.length} / {Object.keys(static_data.champion_map).length})</p>
 									</TooltipContent>
 								</Tooltip>
 							</TableHead>)}
