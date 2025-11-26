@@ -357,7 +357,7 @@ export default function Skins() {
 			{skin_data_summary && (
 				<Card>
 					<CardHeader>
-						<CardTitle>Challenge Progress with Loot</CardTitle>
+						<CardTitle>Skin Challenge Progress</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-muted/50">

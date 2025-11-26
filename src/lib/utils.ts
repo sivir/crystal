@@ -1,8 +1,8 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { invoke } from "@tauri-apps/api/core";
-import { useStaticData } from "@/data_context.tsx";
 import { createClient } from "@supabase/supabase-js";
+import { APIChampionSummaryMap, APILCUChallengeMap } from "@/data_context";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -16,12 +16,11 @@ export async function supabase_invoke<t>(function_name: string, body: any) {
 	return await supabase.functions.invoke<t>(function_name, { body: body, headers: { "x-secret": import.meta.env.VITE_SUPABASE_SECRET } });
 }
 
-export function challenge_icon(id: number, level: string | null = null) {
-	const { static_data } = useStaticData();
-	if (id < 10 || static_data.lcu_data[id] === undefined || static_data.lcu_data[id].currentLevel === "NONE") {
+export function challenge_icon(lcu_data: APILCUChallengeMap, id: number, level: string | null = null) {
+	if (id < 10 || lcu_data[id] === undefined || lcu_data[id].currentLevel === "NONE") {
 		return "https://placehold.co/32?text=" + id;
 	}
-	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${static_data.lcu_data[id]?.levelToIconPath[level ?? static_data.lcu_data[id].currentLevel].substring(40).toLowerCase()}`;
+	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${lcu_data[id]?.levelToIconPath[level ?? lcu_data[id].currentLevel].substring(40).toLowerCase()}`;
 }
 
 export type SortDirection = "asc" | "desc";
@@ -38,7 +37,8 @@ export async function lcu_put_request<t>(path: string, body: any) {
 	return await invoke<t>("lcu_request", { method: "put", path: path, body: body });
 }
 
-export function champion_name(id: number) {
-	const { static_data } = useStaticData();
-	return static_data.champion_map[id]?.name || `Champion ${id}`;
+export function champion_name(id: number, champion_map: APIChampionSummaryMap) {
+	return champion_map[id]?.name || `Champion ${id}`;
 }
+
+export const classes = ["Tank", "Support", "Mage", "Assassin", "Fighter", "Marksman"];

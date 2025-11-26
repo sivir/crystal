@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { APIMasteryDataEntry, useStaticData } from "@/data_context.tsx";
-import { challenge_icon, SortDirection } from "@/lib/utils.ts";
+import { challenge_icon, SortDirection, classes } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,6 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/filter_dropdown.tsx";
 
-const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
-// const classes = ["assassin", "fighter", "mage", "marksman", "support", "tank"];
 const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
 const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
 
@@ -320,7 +318,7 @@ export default function Champions() {
 							{selected_challenges.map(x => <TableHead key={x}>
 								<Tooltip>
 									<TooltipTrigger asChild>
-										<img src={challenge_icon(x)} alt="icon" className="w-6 h-6" />
+										<img src={challenge_icon(static_data.lcu_data, x)} alt="icon" className="w-6 h-6" />
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>{static_data.lcu_data[x].description} ({static_data.lcu_data[x].completedIds.length} / {Object.keys(static_data.champion_map).length})</p>
