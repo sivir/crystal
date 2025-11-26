@@ -4,6 +4,7 @@ import App from "./App";
 import Layout from "./layout";
 import { ThemeProvider } from "./theme-provider";
 import { StaticDataProvider, SessionDataProvider } from "@/data_context.tsx";
+import { ErrorBoundary } from "./error_boundary";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 	<React.StrictMode>
@@ -11,10 +12,12 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 			<StaticDataProvider>
 				<SessionDataProvider>
 					<Layout>
-						<App />
+						<ErrorBoundary>
+							<App />
+						</ErrorBoundary>
 					</Layout>
 				</SessionDataProvider>
 			</StaticDataProvider>
 		</ThemeProvider>
-	</React.StrictMode>,
+	</React.StrictMode>
 );

@@ -6,21 +6,12 @@ import { refresh_data } from "@/App.tsx";
 import { getVersion } from "@tauri-apps/api/app";
 
 import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette, Flame, Globe } from "lucide-react";
-import {
-	Sidebar,
-	SidebarContent, SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarHeader,
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useTheme } from "@/theme-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 
-const items: { title: string, url: page_name, icon: any }[] = [
+export const items: { title: string, url: page_name, icon: any }[] = [
 	{
 		title: "Home",
 		url: "home",
