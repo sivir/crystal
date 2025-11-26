@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import APIButton from "@/components/api_button.tsx";
 
 export default function Profile() {
-	const { static_data, has_lcu_data } = useStaticData();
+	const { static_data } = useStaticData();
 	const [profile_icons, set_profile_icons] = useState<number[]>([0, 0, 0]);
 	const [active_slot, set_active_slot] = useState<number | null>(null);
 	const [text_content, set_text_content] = useState<string>("");
