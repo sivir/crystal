@@ -72,6 +72,7 @@ export default function Eternals() {
 	const [search, set_search] = useState<string>("");
 	const [selected_roles, set_selected_roles] = useState<string[]>([]);
 	const [hide_completed, set_hide_completed] = useState<boolean>(false);
+	const [loaded, set_loaded] = useState<number>(0);
 
 	useEffect(() => {
 		if (static_data.connected && Object.keys(static_data.champion_map).length > 0) {
@@ -79,6 +80,7 @@ export default function Eternals() {
 
 			const promises = Object.keys(static_data.champion_map).map(champion_id => {
 				return lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
+					set_loaded(loaded + 1);
 					return { champion_id: parseInt(champion_id), eternals };
 				});
 			});
@@ -238,6 +240,7 @@ export default function Eternals() {
 	if (loading) {
 		return (
 			<div className="p-6 space-y-4">
+				<Progress value={loaded / Object.keys(static_data.champion_map).length * 100} />
 				<Skeleton className="h-8 w-64" />
 				<Skeleton className="h-96 w-full" />
 			</div>
