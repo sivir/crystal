@@ -62,6 +62,11 @@ type SkinDataSummary = {
 		loot_contribution: number;
 		requirement: number;
 	},
+	victorious: {
+		current: number;
+		loot_contribution: number;
+		requirement: number;
+	},
 	legacy: {
 		current: number;
 		loot_contribution: number;
@@ -254,6 +259,7 @@ export default function Skins() {
 		const challenge_ids = {
 			total: 510001,
 			legacy: 510005,
+			victorious: 510006,
 			epic: 510010,
 			legendary: 510009,
 			mythic: 510008,
@@ -306,6 +312,11 @@ export default function Skins() {
 				current: static_data.lcu_data[challenge_ids.total].currentValue,
 				loot_contribution: loot_contribution_total,
 				requirement: static_data.lcu_data[challenge_ids.total].thresholds.MASTER.value,
+			},
+			victorious: {
+				current: static_data.lcu_data[challenge_ids.victorious].currentValue,
+				loot_contribution: 0,
+				requirement: static_data.lcu_data[challenge_ids.victorious].thresholds.MASTER.value,
 			},
 			legacy: {
 				current: static_data.lcu_data[challenge_ids.legacy].currentValue,
@@ -399,12 +410,12 @@ export default function Skins() {
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-							<div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-								<p className="text-xs text-muted-foreground mb-1">Ultimate</p>
-								<p className="text-sm font-semibold text-orange-500">
-									{skin_data_summary.ultimate.current}
-									{skin_data_summary.ultimate.loot_contribution > 0 && (
+					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+						<div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+							<p className="text-xs text-muted-foreground mb-1">Ultimate</p>
+							<p className="text-sm font-semibold text-orange-500">
+								{skin_data_summary.ultimate.current}
+								{skin_data_summary.ultimate.loot_contribution > 0 && (
 										<span className="text-green-600 dark:text-green-400"> +{skin_data_summary.ultimate.loot_contribution}</span>
 									)}
 									<span className="text-muted-foreground"> = {skin_data_summary.ultimate.current + skin_data_summary.ultimate.loot_contribution}</span>
@@ -455,9 +466,14 @@ export default function Skins() {
 									<span className="text-muted-foreground"> / {skin_data_summary.legacy.requirement}</span>
 								</p>
 							</div>
+							<div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+								<p className="text-xs text-muted-foreground mb-1">Victorious</p>
+								<p className="text-sm font-semibold text-green-600 dark:text-green-500">
+									{skin_data_summary.victorious.current}
+									<span className="text-muted-foreground"> / {skin_data_summary.victorious.requirement}</span>
+								</p>
+							</div>
 						</div>
-
-
 					</CardContent>
 				</Card>
 			)}
