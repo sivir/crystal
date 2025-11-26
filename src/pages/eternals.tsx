@@ -45,8 +45,6 @@ type EternalProgress = {
 type SeriesProgress = {
 	series_name: string;
 	eternals: EternalProgress[];
-	current_value: number;
-	target_value: number;
 	progress_percent: number;
 	stones_owned: number;
 };
@@ -120,8 +118,7 @@ export default function Eternals() {
 				const metadata_set = static_data.statstones_map[series.itemId.toString()];
 
 				const eternals: EternalProgress[] = [];
-				let series_current = 0;
-				let series_target = 0;
+				let series_progress = 0;
 
 				series.statstones.forEach((statstone, index) => {
 					const metadata = metadata_set?.statstones[index];
@@ -130,8 +127,7 @@ export default function Eternals() {
 					const target_value = metadata?.milestones.slice(0, 5).reduce((sum, val) => sum + val, 0) || 0;
 					const current_value = statstone.playerRecord?.value || 0;
 
-					series_current += current_value;
-					series_target += target_value;
+					series_progress += Math.min((current_value / target_value) * 100, 100);
 					total_current += current_value;
 					total_target += target_value;
 
@@ -147,14 +143,10 @@ export default function Eternals() {
 					});
 				});
 
-				const series_progress = series_target > 0 ? Math.min((series_current / series_target) * 100, 100) : 0;
-
 				series_list.push({
 					series_name: series.name,
 					eternals,
-					current_value: series_current,
-					target_value: series_target,
-					progress_percent: series_progress,
+					progress_percent: series_progress / series.statstones.length,
 					stones_owned: series.stonesOwned,
 				});
 			});
