@@ -99,14 +99,14 @@ type SkinDataSummary = {
 	},
 };
 
-type SortKey = "champion" | "total" | "owned" | "owned_plus_loot";
+type SortKey = "champion" | "total" | "owned" | "loot" | "owned_plus_loot" | "unowned";
 
 export default function Skins() {
 	const { static_data } = useStaticData();
 	const [all_skins_api, set_all_skins_api] = useState<APIMinimalSkin[]>([]);
 	const [loot_data_api, set_loot_data_api] = useState<APILootData["playerLoot"]>({});
 	const [loading, set_loading] = useState<boolean>(true);
-	const [sort_key, set_sort_key] = useState<SortKey>("total");
+	const [sort_key, set_sort_key] = useState<SortKey>("owned");
 	const [sort_direction, set_sort_direction] = useState<SortDirection>("desc");
 	const [table_data, set_table_data] = useState<ChampionSkinRow[]>([]);
 
@@ -202,6 +202,12 @@ export default function Skins() {
 					break;
 				case "owned":
 					comparison = a.owned_skins.length - b.owned_skins.length;
+					break;
+				case "loot":
+					comparison = a.loot_skins.length - b.loot_skins.length;
+					break;
+				case "unowned":
+					comparison = a.unowned_skins.length - b.unowned_skins.length;
 					break;
 				case "owned_plus_loot":
 					// Only count unowned loot skins
@@ -460,35 +466,23 @@ export default function Skins() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50"
-								onClick={() => handle_sort("champion")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handle_sort("champion")}>
 								Champion <SortIcon column_key="champion" />
 							</TableHead>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50 text-center"
-								onClick={() => handle_sort("total")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("total")}>
 								Total Skins <SortIcon column_key="total" />
 							</TableHead>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50 text-center"
-								onClick={() => handle_sort("owned")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("owned")}>
 								Owned <SortIcon column_key="owned" />
 							</TableHead>
-							<TableHead className="text-center">
-								In Loot
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("loot")}>
+								In Loot <SortIcon column_key="loot" />
 							</TableHead>
-							<TableHead
-								className="cursor-pointer hover:bg-muted/50 text-center"
-								onClick={() => handle_sort("owned_plus_loot")}
-							>
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("owned_plus_loot")}>
 								Owned + Loot <SortIcon column_key="owned_plus_loot" />
 							</TableHead>
-							<TableHead className="text-center">
-								Unowned
+							<TableHead className="cursor-pointer hover:bg-muted/50 text-center" onClick={() => handle_sort("unowned")}>
+								Unowned <SortIcon column_key="unowned" />
 							</TableHead>
 						</TableRow>
 					</TableHeader>
