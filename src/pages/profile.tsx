@@ -17,7 +17,7 @@ export default function Profile() {
 
 	useEffect(() => {
 		if (static_data.riot_data.preferences) {
-			set_profile_icons(static_data.riot_data.preferences.challengeIds);
+			set_profile_icons([...static_data.riot_data.preferences.challengeIds, ...Array(3 - static_data.riot_data.preferences.challengeIds.length).fill(-1)]);
 		}
 	}, [static_data.riot_data.preferences]);
 
@@ -116,8 +116,10 @@ export default function Profile() {
 							</div>
 						)}
 
-						<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
-						<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: [] })}>Set Empty Icons</APIButton>
+						<div className="flex gap-2">
+							<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
+							<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: [] })}>Set Empty Icons</APIButton>
+						</div>
 					</CardContent>
 				</Card>
 
