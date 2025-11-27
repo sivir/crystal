@@ -22,14 +22,14 @@ const region_to_platform : { [key: string]: string } = {
 	"tr": "tr1",
 	"ru": "ru",
 	"ph": "ph2",
-	"sg": "sg2",
+	"sg2": "sg2",
 	"th": "th2",
 	"tw": "tw2",
 	"vn": "vn2"
 }
 
 async function update_riot_data(id: string, region: string) {
-	console.log("update_riot_data id", id);
+	console.log("update_riot_data id: ", id, " region: ", region);
 	const challenge_response = await fetch(`https://${region_to_platform[region]}.api.riotgames.com/lol/challenges/v1/player-data/${id}?api_key=${riot_api_key}`);
 	const challenge_data = await challenge_response.json();
 	const mastery_response = await fetch(`https://${region_to_platform[region]}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${id}?api_key=${riot_api_key}`);

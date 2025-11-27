@@ -20,13 +20,12 @@ Deno.serve(async (req) => {
 	try {
 		// check if user exists in db
 		const id = riot_id.split("#");
-		console.log("id", id);
+		console.log("get-user on id: ", id);
 		const summoner_response = await fetch(`https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${id[0]}/${id[1]}?api_key=${riot_api_key}`);
 		const summoner_data = await summoner_response.json();
 		const puuid = summoner_data.puuid;
-		console.log("summoner_data", summoner_data);
 		const res = await get_user(puuid);
-		console.log("res", res);
+		console.log("id: ", id, " res: ", res);
 		// if not, update db with riot data
 		if (res.length === 0) {
 			const data = await update_riot_data(puuid, region);
