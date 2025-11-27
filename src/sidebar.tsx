@@ -42,15 +42,15 @@ export const items: { title: string, url: page_name, icon: any }[] = [
 		url: "team_builder",
 		icon: Globe,
 	},
-	// {
-	// 	title: "Settings",
-	// 	url: "settings",
-	// 	icon: Settings,
-	// },
 	{
 		title: "Debug",
 		url: "debug",
 		icon: Bug,
+	},
+	{
+		title: "User",
+		url: "user",
+		icon: UserPen,
 	},
 ];
 

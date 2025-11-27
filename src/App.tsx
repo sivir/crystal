@@ -13,6 +13,7 @@ import Profile from "@/pages/profile.tsx";
 import Skins from "@/pages/skins.tsx";
 import Eternals from "@/pages/eternals.tsx";
 import TeamBuilder from "@/pages/team_builder.tsx";
+import User from "@/pages/user.tsx";
 
 const page_components: Record<page_name, React.ComponentType> = {
 	"home": Champions,
@@ -23,6 +24,7 @@ const page_components: Record<page_name, React.ComponentType> = {
 	"team_builder": TeamBuilder,
 	"settings": Champions,
 	"debug": Debug,
+	"user": User,
 }
 
 export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<StaticData>>) {

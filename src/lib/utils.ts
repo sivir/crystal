@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { invoke } from "@tauri-apps/api/core";
 import { createClient } from "@supabase/supabase-js";
-import { APIChampionSummaryMap, APILCUChallengeMap } from "@/data_context";
+import { APIChampionSummaryMap, APILCUChallenge } from "@/data_context";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -16,11 +16,12 @@ export async function supabase_invoke<t>(function_name: string, body: any) {
 	return await supabase.functions.invoke<t>(function_name, { body: body, headers: { "x-secret": import.meta.env.VITE_SUPABASE_SECRET } });
 }
 
-export function challenge_icon(lcu_data: APILCUChallengeMap, id: number, level: string | null = null) {
-	if (id < 10 || lcu_data[id] === undefined || lcu_data[id].currentLevel === "NONE") {
+export function challenge_icon(challenge: APILCUChallenge, id: number | null = null) {
+	if (challenge == undefined || challenge.id < 10) {
 		return "https://placehold.co/32?text=" + id;
 	}
-	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${lcu_data[id]?.levelToIconPath[level ?? lcu_data[id].currentLevel].substring(40).toLowerCase()}`;
+	const level = challenge.currentLevel == "NONE" ? "IRON" : challenge.currentLevel;
+	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${challenge.levelToIconPath[level].substring(40).toLowerCase()}`;
 }
 
 export type SortDirection = "asc" | "desc";

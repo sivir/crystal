@@ -139,7 +139,7 @@ export default function Skins() {
 		});
 
 		return all_skins_api.map(skin => {
-			const metadata = static_data.skin_map[skin.id.toString()];
+			const metadata = static_data.skin_map[skin.id];
 			return {
 				id: skin.id,
 				name: metadata?.name || `Skin ${skin.id}`,

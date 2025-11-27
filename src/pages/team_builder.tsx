@@ -88,7 +88,7 @@ export default function TeamBuilder() {
 										{challenge.name}
 									</Label>
 									<div className="flex items-center gap-1">
-										<img src={challenge_icon(static_data.lcu_data, challenge.id)} alt={challenge.name} className="w-4 h-4" />
+										<img src={challenge_icon(static_data.lcu_data[challenge.id])} alt={challenge.name} className="w-4 h-4" />
 										<span className="text-xs text-muted-foreground">({progress_text})</span>
 									</div>
 								</div>

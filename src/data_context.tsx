@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useMemo } from "react";
 
-export type page_name = "home" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug";
+export type page_name = "home" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug" | "user";
 
 export type APIMasteryDataEntry = {
 	championId: number;
@@ -52,7 +52,7 @@ export type APISkinMetadata = {
 };
 
 export type APISkinMetadataMap = {
-	[id: string]: APISkinMetadata;
+	[id: number]: APISkinMetadata;
 }
 
 export type APIStatstone = {
@@ -95,6 +95,7 @@ export type StatstonesMap = {
 export type APILCUChallenge = {
 	name: string;
 	id: number;
+	category: string;
 	description: string;
 	currentValue: number;
 	currentLevel: string;
@@ -107,6 +108,8 @@ export type APILCUChallenge = {
 	levelToIconPath: {
 		[key: string]: string;
 	}
+	pointsAwarded: number;
+	idListType: string;
 	isCapstone: boolean;
 	capstoneGroupName: string;
 	availableIds: number[];
