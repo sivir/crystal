@@ -17,7 +17,7 @@ export default function Profile() {
 
 	useEffect(() => {
 		if (static_data.riot_data.preferences) {
-			set_profile_icons(static_data.riot_data.preferences.challengeIds);
+			set_profile_icons([...static_data.riot_data.preferences.challengeIds, ...Array(3 - static_data.riot_data.preferences.challengeIds.length).fill(-1)]);
 		}
 	}, [static_data.riot_data.preferences]);
 
@@ -66,7 +66,7 @@ export default function Profile() {
 												}`}
 											>
 												<img
-													src={challenge_icon(static_data.lcu_data, id)}
+													src={challenge_icon(static_data.lcu_data[id], id)}
 													alt={`slot ${slot_index + 1}`}
 													className="w-full h-full object-cover rounded-md"
 												/>
@@ -101,7 +101,7 @@ export default function Profile() {
 													className="relative w-12 h-12 rounded-md transition-all hover:ring-2 hover:ring-primary"
 												>
 													<img
-														src={challenge_icon(static_data.lcu_data, id)}
+														src={challenge_icon(static_data.lcu_data[id])}
 														alt={`icon ${id}`}
 														className="w-full h-full object-cover rounded-md"
 													/>
@@ -116,7 +116,10 @@ export default function Profile() {
 							</div>
 						)}
 
-						<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
+						<div className="flex gap-2">
+							<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
+							<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: [] })}>Set Empty Icons</APIButton>
+						</div>
 					</CardContent>
 				</Card>
 

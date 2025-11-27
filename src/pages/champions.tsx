@@ -318,7 +318,7 @@ export default function Champions() {
 							{selected_challenges.map(x => <TableHead key={x}>
 								<Tooltip>
 									<TooltipTrigger asChild>
-										<img src={challenge_icon(static_data.lcu_data, x)} alt="icon" className="w-6 h-6" />
+										<img src={challenge_icon(static_data.lcu_data[x])} alt="icon" className="w-6 h-6" />
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>{static_data.lcu_data[x].description} ({static_data.lcu_data[x].completedIds.length} / {Object.keys(static_data.champion_map).length})</p>
