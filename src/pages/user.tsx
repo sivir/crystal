@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useStaticData, APILCUChallenge } from "@/data_context";
-import { challenge_icon } from "@/lib/utils";
+import { challenge_icon, SortDirection } from "@/lib/utils";
+
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Search } from "lucide-react";
@@ -13,19 +14,20 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 
 const levels = ["NONE", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
 
-function TempChallengeCard({ challenge }: { challenge: APILCUChallenge }) {
+type ChallengeProps = {
+	challenge: APILCUChallenge;
+	progress: number;
+	next_threshold: number;
+}
+
+function TempChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 	const { static_data } = useStaticData();
 	const [expanded, set_expanded] = useState(false);
 
-	const nextLevelIndex = levels.indexOf(challenge.currentLevel) + 1;
-	const nextLevel = nextLevelIndex < levels.length ? levels[nextLevelIndex] : "CHALLENGER";
-	const nextThreshold = challenge.thresholds[nextLevel]?.value || challenge.currentValue;
-	const progress = (challenge.currentValue / nextThreshold) * 100;
-
 	function get_id_name(id: number) {
-		if (challenge.idListType === "CHAMPION_SKIN") {
+		if (challenge.challenge.idListType === "CHAMPION_SKIN") {
 			return static_data.skin_map[id]?.name || id;
-		} else if (challenge.idListType === "CHAMPION") {
+		} else if (challenge.challenge.idListType === "CHAMPION") {
 			return static_data.champion_map[id]?.name || id;
 		} else {
 			return id;
@@ -36,34 +38,34 @@ function TempChallengeCard({ challenge }: { challenge: APILCUChallenge }) {
 		<Card className="p-4 cursor-pointer" onClick={() => set_expanded(!expanded)}>
 			<div className="flex flex-col gap-4">
 				<div className="flex flex-row gap-4">
-					<img src={challenge_icon(challenge)} alt={challenge.name} className="w-12 h-12 rounded-full" />
+					<img src={challenge_icon(challenge.challenge)} alt={challenge.challenge.name} className="w-12 h-12 rounded-full" />
 					<div className="flex flex-col gap-1">
-						<div className="font-bold">{challenge.name}</div>
-						<span className="text-sm text-gray-400">{challenge.description}</span>
+						<div className="font-bold">{challenge.challenge.name}</div>
+						<span className="text-sm text-gray-400">{challenge.challenge.description}</span>
 					</div>
 					<div className="ml-auto flex flex-col gap-2">
-						<div className="text-sm text-gray-400">{challenge.currentLevel}</div>
-						<div className="text-sm text-gray-400">{challenge.currentValue} / {nextThreshold}</div>
+						<div className="text-sm text-gray-400">{challenge.challenge.currentLevel}</div>
+						<div className="text-sm text-gray-400">{challenge.challenge.currentValue} / {challenge.next_threshold}</div>
 					</div>
 				</div>
-				<Progress className="h-1" value={progress} />
+				<Progress className="h-1" value={challenge.progress} />
 			</div>
-			{expanded && challenge.idListType != "NONE" && (
+			{expanded && challenge.challenge.idListType != "NONE" && (
 				<div className="mt-4 p-2 bg-slate-900 rounded text-sm">
 					<div className="grid grid-cols-2 gap-4">
 						<div>
 							<h4 className="font-bold mb-1 text-green-400">Completed IDs</h4>
 							<div className="flex flex-wrap gap-1">
-								{challenge.completedIds.map(id => (
-									<span key={id} className="bg-green-900 text-green-200 px-1 rounded text-xs">{get_id_name(id)}</span>
+								{challenge.challenge.completedIds.map(id => get_id_name(id)).filter(x => typeof x === "string").sort((a, b) => a.localeCompare(b)).map(id => (
+									<span key={id} className="bg-green-900 text-green-200 px-1 rounded text-xs">{id}</span>
 								))}
 							</div>
 						</div>
 						<div>
 							<h4 className="font-bold mb-1 text-yellow-400">Available IDs</h4>
 							<div className="flex flex-wrap gap-1">
-								{challenge.availableIds.map(id => (
-									<span key={id} className="bg-yellow-900 text-yellow-200 px-1 rounded text-xs">{get_id_name(id)}</span>
+								{challenge.challenge.availableIds.map(id => get_id_name(id)).filter(x => typeof x === "string").sort((a, b) => a.localeCompare(b)).map(id => (
+									<span key={id} className="bg-yellow-900 text-yellow-200 px-1 rounded text-xs">{id}</span>
 								))}
 							</div>
 						</div>
@@ -77,34 +79,53 @@ function TempChallengeCard({ challenge }: { challenge: APILCUChallenge }) {
 export default function User() {
 	const { static_data } = useStaticData();
 	const [search, set_search] = useState("");
-	const [sort_by, set_sort_by] = useState<"name" | "progress" | "level">("progress");
-	const [sort_order, set_sort_order] = useState<"asc" | "desc">("desc");
-	const [hide_masters, set_hide_masters] = useState(false);
-	const [hide_legacy, set_hide_legacy] = useState(false);
+	const [sort_by, set_sort_by] = useState<"name" | "progress">("progress");
+	const [sort_order, set_sort_order] = useState<SortDirection>("desc");
+	const [hide_masters, set_hide_masters] = useState(true);
+	const [hide_legacy, set_hide_legacy] = useState(true);
 
-	const filteredChallenges = useMemo(() => {
+	const filtered_challenges: ChallengeProps[] = useMemo(() => {
 		let challenges = Object.values(static_data.lcu_data);
-
-		if (hide_masters) {
-			challenges = challenges.filter(c => c.pointsAwarded < 100);
-		}
 
 		if (hide_legacy) {
 			challenges = challenges.filter(c => c.category !== "LEGACY");
 		}
 
 		if (search) {
-			challenges = challenges.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+			challenges = challenges.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase()));
 		}
 
-		return challenges.sort((a, b) => {
-			if (sort_by === "name") return a.name.localeCompare(b.name) * (sort_order === "asc" ? 1 : -1);
-			if (sort_by === "level") {
-				 return levels.indexOf(b.currentLevel) - levels.indexOf(a.currentLevel) * (sort_order === "asc" ? 1 : -1);
+		let props_challenges = challenges.map(c => {
+			const next_level_index = levels.indexOf(c.currentLevel) + 1;
+			const next_level = next_level_index < levels.length ? levels[next_level_index] : "CHALLENGER";
+			const next_threshold = c.thresholds[next_level]?.value || c.thresholds["MASTER"]?.value || c.thresholds[c.currentLevel]?.value || c.currentValue;
+			const progress = (c.currentValue / next_threshold) * 100;
+
+			return {
+				challenge: c,
+				progress,
+				next_threshold
+			};
+		}).sort((a, b) => {
+			if (sort_by === "name") return a.name.localeCompare(b.name) * (sort_order === "asc" ? -1 : 1);
+			if (sort_by === "progress") {
+				if (a.progress >= 100 && b.progress >= 100) {
+					if (a.challenge.currentLevel != b.challenge.currentLevel) {
+						return levels.indexOf(a.challenge.currentLevel) - levels.indexOf(b.challenge.currentLevel) * (sort_order === "asc" ? 1 : -1);
+					} else {
+						return a.progress - b.progress * (sort_order === "asc" ? -1 : 1);
+					}
+				}
+				return (b.progress - a.progress) * (sort_order === "asc" ? -1 : 1);
 			}
-			return (b.currentValue - a.currentValue) * (sort_order === "asc" ? 1 : -1);
 		});
-	}, [static_data.lcu_data, hide_masters, search, sort_by, sort_order]);
+
+		if (hide_masters) {
+			props_challenges = props_challenges.filter(c => c.challenge.pointsAwarded < 100 && c.challenge.currentValue < c.next_threshold);
+		}
+
+		return props_challenges;
+	}, [static_data.lcu_data, hide_masters, hide_legacy, search, sort_by, sort_order]);
 
 	return (
 		<div className="p-6 space-y-6">
@@ -121,7 +142,7 @@ export default function User() {
 
 				<Select
 					onValueChange={(field) => {
-						set_sort_by(field as "name" | "level" | "progress");
+						set_sort_by(field as "name" | "progress");
 					}}
 					value={sort_by}
 				>
@@ -130,7 +151,6 @@ export default function User() {
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="name">Name</SelectItem>
-						<SelectItem value="level">Level</SelectItem>
 						<SelectItem value="progress">Progress</SelectItem>
 					</SelectContent>
 				</Select>
@@ -174,7 +194,7 @@ export default function User() {
 			</div>
 
 			<div className="grid grid-cols-1 gap-2">
-				{filteredChallenges.map(challenge => {
+				{filtered_challenges.map(challenge => {
 					return (<TempChallengeCard key={challenge.id} challenge={challenge} />);
 				})}
 			</div>

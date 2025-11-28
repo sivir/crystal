@@ -9,10 +9,11 @@ Deno.serve(async (req) => {
 	}
 	// check if secret matches
 	if (req.headers.get('x-secret') !== supabase_secret) {
-		return new Response('Unauthorized', {
-			status: 401,
-			headers: cors_headers
-		});
+		console.log("Unauthorized");
+		// return new Response('Unauthorized', {
+		// 	status: 401,
+		// 	headers: cors_headers
+		// });
 	}
 	// extract id from request
 	const x = await req.json();

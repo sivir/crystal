@@ -25,7 +25,7 @@ export class ErrorBoundary extends React.Component<props, state> {
 
     render() {
         if (this.state.has_error) {
-            return <div>error</div>;
+            return <div>error: {JSON.stringify(this.state.error, Object.getOwnPropertyNames(this.state.error), 4)}</div>;
         }
         return this.props.children;
     }

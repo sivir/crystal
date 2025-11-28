@@ -78,7 +78,7 @@ export default function Debug() {
 			)}
 			<div className="flex flex-col gap-2">
 				<ChallengeCard challenge={static_data.lcu_data[510006]} />
-				<>gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}</>
+				<>gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}, has riot data: {static_data.riot_data ? "true" : "false"}</>
 
 				<Card>
 					<CardHeader>
