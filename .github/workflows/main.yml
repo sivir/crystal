@@ -32,6 +32,7 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SUPABASE_SECRET: ${{ secrets.VITE_SUPABASE_SECRET }}
         with:
           tagName: v__VERSION__
           releaseName: "crystal v__VERSION__"
