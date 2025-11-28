@@ -14,10 +14,38 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 
 const levels = ["NONE", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
 
+// TODO: take everything out of challenge, keep only what's needed
 type ChallengeProps = {
 	challenge: APILCUChallenge;
 	progress: number;
 	next_threshold: number;
+}
+
+type Note = {
+	type: "good" | "bug" | "info";
+	text: string;
+}
+
+// incomplete, need to make sure info is right this is just for proof of concept
+const challenge_notes: Record<number, Note[]> = {
+	302201: [
+		{
+			type: "bug",
+			text: "The herald has to survive until both turrets are destroyed, and you cannot ride it!"
+		}
+	],
+	301302: [
+		{
+			type: "info",
+			text: "You actually have to avoid getting kills, dying is fine!"
+		}
+	],
+	203409: [
+		{
+			type: "good",
+			text: "Stealing 2/3 grubs counts!"
+		}
+	]
 }
 
 function TempChallengeCard({ challenge }: { challenge: ChallengeProps }) {
@@ -40,7 +68,7 @@ function TempChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 				<div className="flex flex-row gap-4">
 					<img src={challenge_icon(challenge.challenge)} alt={challenge.challenge.name} className="w-12 h-12 rounded-full" />
 					<div className="flex flex-col gap-1">
-						<div className="font-bold">{challenge.challenge.name}</div>
+						<div className="font-bold">{challenge.challenge.name} ({challenge.challenge.id})</div>
 						<span className="text-sm text-gray-400">{challenge.challenge.description}</span>
 					</div>
 					<div className="ml-auto flex flex-col gap-2">
@@ -72,6 +100,15 @@ function TempChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 					</div>
 				</div>
 			)}
+			{expanded && challenge_notes[challenge.challenge.id] && (
+				<div className="mt-4 p-2 bg-slate-900 rounded text-sm">
+					<ul className="list-disc list-inside">
+						{challenge_notes[challenge.challenge.id].map((note, i) => (
+							<li key={i} className={`text-${note.type === "bug" ? "red" : note.type === "info" ? "yellow" : "green"}-400`}>{note.text}</li>
+						))}
+					</ul>
+				</div>
+			)}
 		</Card>
 	);
 }
@@ -83,6 +120,7 @@ export default function User() {
 	const [sort_order, set_sort_order] = useState<SortDirection>("desc");
 	const [hide_masters, set_hide_masters] = useState(true);
 	const [hide_legacy, set_hide_legacy] = useState(true);
+	const [hide_capstone, set_hide_capstone] = useState(true);
 
 	const filtered_challenges: ChallengeProps[] = useMemo(() => {
 		let challenges = Object.values(static_data.lcu_data);
@@ -93,6 +131,10 @@ export default function User() {
 
 		if (search) {
 			challenges = challenges.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase()));
+		}
+
+		if (hide_capstone) {
+			challenges = challenges.filter(c => !c.isCapstone);
 		}
 
 		let props_challenges = challenges.map(c => {
@@ -107,7 +149,7 @@ export default function User() {
 				next_threshold
 			};
 		}).sort((a, b) => {
-			if (sort_by === "name") return a.name.localeCompare(b.name) * (sort_order === "asc" ? -1 : 1);
+			if (sort_by === "name") return a.challenge.name.localeCompare(b.challenge.name) * (sort_order === "asc" ? -1 : 1);
 			if (sort_by === "progress") {
 				if (a.progress >= 100 && b.progress >= 100) {
 					if (a.challenge.currentLevel != b.challenge.currentLevel) {
@@ -171,31 +213,30 @@ export default function User() {
 				</Button>
 
 				<div className="flex items-center gap-2">
-					<Checkbox
-						id="hide-masters"
-						checked={hide_masters}
-						onCheckedChange={(checked) => set_hide_masters(checked as boolean)}
-					/>
+					<Checkbox id="hide-masters" checked={hide_masters} onCheckedChange={(checked) => set_hide_masters(checked as boolean)} />
 					<Label htmlFor="hide-masters" className="text-sm cursor-pointer">
-						Hide masters+
+						Hide Masters+
 					</Label>
 				</div>
 
 				<div className="flex items-center gap-2">
-					<Checkbox
-						id="hide-legacy"
-						checked={hide_legacy}
-						onCheckedChange={(checked) => set_hide_legacy(checked as boolean)}
-					/>
+					<Checkbox id="hide-legacy" checked={hide_legacy} onCheckedChange={(checked) => set_hide_legacy(checked as boolean)}	/>
 					<Label htmlFor="hide-legacy" className="text-sm cursor-pointer">
-						Hide legacy
+						Hide Legacy
+					</Label>
+				</div>
+
+				<div className="flex items-center gap-2">
+					<Checkbox id="hide-capstone" checked={hide_capstone} onCheckedChange={(checked) => set_hide_capstone(checked as boolean)}	/>
+					<Label htmlFor="hide-capstone" className="text-sm cursor-pointer">
+						Hide Capstones
 					</Label>
 				</div>
 			</div>
 
 			<div className="grid grid-cols-1 gap-2">
 				{filtered_challenges.map(challenge => {
-					return (<TempChallengeCard key={challenge.id} challenge={challenge} />);
+					return (<TempChallengeCard key={challenge.challenge.id} challenge={challenge} />);
 				})}
 			</div>
 		</div>
