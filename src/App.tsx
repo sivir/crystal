@@ -29,6 +29,7 @@ const page_components: Record<page_name, React.ComponentType> = {
 
 export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<StaticData>>) {
 	lcu_get_request<APILCUChallengeMap>("/lol-challenges/v1/challenges/local-player").then(lcu_data => {
+		console.log("lcu_data", lcu_data);
 		setStaticData((prev: StaticData) => ({ ...prev, lcu_data: lcu_data }));
 	});
 	// only if supabase down

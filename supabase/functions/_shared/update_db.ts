@@ -50,6 +50,7 @@ async function update_db_riot_data(id: string, challenge_data: any, mastery_data
         SET (riot_data, last_update_riot, mastery_data) = (${challenge_data}, ${time}, ${mastery_data})`;
 	connection.release();
 }
+
 async function update_db_lcu_data(id: string, data: any) {
 	const connection = await pool.connect();
 	const user = await get_user(id);
@@ -63,11 +64,13 @@ async function update_db_lcu_data(id: string, data: any) {
                                  WHERE id = ${id}`;
 	connection.release();
 }
-async function get_user(id: string) {
+
+async function get_user(id: string): Promise<any[]> {
 	const connection = await pool.connect();
 	const res = await connection.queryObject`SELECT * FROM users WHERE id = ${id}`;
 	console.log("get_user res", res);
 	connection.release();
 	return res.rows;
 }
+
 export { cors_headers, update_db_riot_data, get_user, update_riot_data, update_db_lcu_data, riot_api_key, supabase_secret };
