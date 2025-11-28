@@ -42,4 +42,4 @@ export function champion_name(id: number, champion_map: APIChampionSummaryMap) {
 	return champion_map[id]?.name || `Champion ${id}`;
 }
 
-export const classes = ["Assassin", "Fighter", "Marksman", "Mage", "Support", "Tank"];
+export const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
