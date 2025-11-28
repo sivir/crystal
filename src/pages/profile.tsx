@@ -119,6 +119,7 @@ export default function Profile() {
 						<div className="flex gap-2">
 							<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: profile_icons })}>Update Icons</APIButton>
 							<APIButton onClick={() => lcu_post_request("/lol-challenges/v1/update-player-preferences", { ...static_data.riot_data.preferences, challengeIds: [] })}>Set Empty Icons</APIButton>
+							<APIButton onClick={() => lcu_put_request("/lol-regalia/v2/current-summoner/regalia", { preferredCrestType: "prestige", preferredBannerType: "lastSeasonHighestRank", selectedPrestigeCrest: 42 })}>Set No Border</APIButton>
 						</div>
 					</CardContent>
 				</Card>

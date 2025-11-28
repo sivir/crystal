@@ -150,7 +150,7 @@ export default function User() {
 			};
 		}).sort((a, b) => {
 			if (sort_by === "name") return a.challenge.name.localeCompare(b.challenge.name) * (sort_order === "asc" ? -1 : 1);
-			if (sort_by === "progress") {
+			//if (sort_by === "progress") {
 				if (a.progress >= 100 && b.progress >= 100) {
 					if (a.challenge.currentLevel != b.challenge.currentLevel) {
 						return levels.indexOf(a.challenge.currentLevel) - levels.indexOf(b.challenge.currentLevel) * (sort_order === "asc" ? 1 : -1);
@@ -159,7 +159,7 @@ export default function User() {
 					}
 				}
 				return (b.progress - a.progress) * (sort_order === "asc" ? -1 : 1);
-			}
+			//}
 		});
 
 		if (hide_masters) {
