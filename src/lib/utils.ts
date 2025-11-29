@@ -16,11 +16,21 @@ export async function supabase_invoke<t>(function_name: string, body: any) {
 	return await supabase.functions.invoke<t>(function_name, { body: body, headers: { "x-secret": import.meta.env.VITE_SUPABASE_SECRET } });
 }
 
+export const levels = ["NONE", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
+
 export function challenge_icon(challenge: APILCUChallenge, id: number | null = null) {
 	if (challenge == undefined || challenge.id < 10) {
 		return "https://placehold.co/32?text=" + id;
 	}
-	const level = challenge.currentLevel == "NONE" ? "IRON" : challenge.currentLevel;
+	let level = challenge.currentLevel;
+	if (level == "NONE") {
+		for (let i = 0; i < levels.length; i++) {
+			if (challenge.levelToIconPath[levels[i]]) {
+				level = levels[i];
+				break;
+			}
+		}
+	}
 	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${challenge.levelToIconPath[level].substring(40).toLowerCase()}`;
 }
 
