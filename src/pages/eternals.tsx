@@ -78,7 +78,7 @@ export default function Eternals() {
 
 			const promises = Object.keys(static_data.champion_map).map(champion_id => {
 				return lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
-					set_loaded(loaded + 1);
+					set_loaded(loaded => loaded + 1);
 					return { champion_id: parseInt(champion_id), eternals };
 				});
 			});
