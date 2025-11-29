@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useStaticData, APILCUChallenge } from "@/data_context";
-import { challenge_icon, SortDirection } from "@/lib/utils";
+import { challenge_icon, SortDirection, levels } from "@/lib/utils";
 
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,8 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp } from "lucide-react";
-
-const levels = ["NONE", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
 
 // TODO: take everything out of challenge, keep only what's needed
 type ChallengeProps = {

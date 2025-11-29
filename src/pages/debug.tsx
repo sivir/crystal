@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useStaticData, useSessionData, APILCUChallenge } from "@/data_context";
+import { useStaticData, useSessionData } from "@/data_context";
 import { invoke } from "@tauri-apps/api/core";
 
 import { Button } from "@/components/ui/button";
@@ -10,28 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { challenge_icon } from "@/lib/utils";
-import { Progress } from "@/components/ui/progress";
-
-function ChallengeCard({ challenge }: { challenge: APILCUChallenge }) {
-	const { static_data } = useStaticData();
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>
-					<div className="flex items-center gap-2">
-						<img src={challenge_icon(static_data.lcu_data[challenge.id])} alt={challenge.name} className="w-12 h-12" />
-						<div className="flex flex-col">
-							{challenge.name}
-							<p className="text-xs text-muted-foreground">{challenge.description}</p>
-							<Progress value={challenge.currentValue} />
-						</div>
-					</div>
-				</CardTitle>
-			</CardHeader>
-		</Card>
-	);
-}
 
 export default function Debug() {
 	const { static_data } = useStaticData();
@@ -77,7 +55,6 @@ export default function Debug() {
 				</Alert>
 			)}
 			<div className="flex flex-col gap-2">
-				<ChallengeCard challenge={static_data.lcu_data[510006]} />
 				<>gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}, has riot data: {static_data.riot_data ? "true" : "false"}</>
 
 				<Card>
