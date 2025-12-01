@@ -26,6 +26,7 @@ export type APIDatabaseData = {
 export type APISummonerData = {
 	tagLine: string;
 	gameName: string;
+	summonerId: string;
 }
 
 export type APIRegionLocale = {
@@ -198,6 +199,24 @@ export type APIRiotData = {
 	}[]
 }
 
+export type APIMinimalSkin = {
+	championId: number;
+	id: number;
+	isBase: boolean;
+	ownership: {
+		owned: boolean;
+	};
+};
+
+export type APILootData = {
+	playerLoot: {
+		[id: string]: {
+			parentStoreItemId: number;
+			storeItemId: number;
+		};
+	};
+};
+
 const default_riot_challenge_data: APIRiotData = {
 	totalPoints: {
 		current: 0,
@@ -211,6 +230,24 @@ const default_riot_challenge_data: APIRiotData = {
 	challenges: []
 };
 
+export type APIEternalsSeries = {
+	itemId: number;
+	name: string;
+	statstones: {
+		description: string;
+		formattedValue: string;
+		isRetired: boolean;
+		name: string;
+		playerRecord?: {
+			value: number;
+		};
+		statstoneId: string;
+	}[];
+	stonesOwned: number;
+};
+
+export type APIEternalsData = APIEternalsSeries[];
+
 export interface StaticData {
 	riot_data: APIRiotData;
 	lcu_data: APILCUChallengeMap;
@@ -218,8 +255,16 @@ export interface StaticData {
 	champion_map: APIChampionSummaryMap;
 	skin_map: APISkinMetadataMap;
 	statstones_map: StatstonesMap;
+	eternals_map: Map<number, APIEternalsData>;
 	page: page_name;
 	connected: boolean;
+	loot_data: {
+		[id: string]: {
+			parentStoreItemId: number;
+			storeItemId: number;
+		};
+	};
+	minimal_skins: APIMinimalSkin[];
 }
 
 interface SessionData {
@@ -234,8 +279,11 @@ const initial_page_data: StaticData = {
 	champion_map: {},
 	skin_map: {},
 	statstones_map: {},
+	eternals_map: new Map(),
 	page: "home",
 	connected: false,
+	loot_data: {},
+	minimal_skins: [],
 };
 
 const initial_session_data: SessionData = {
