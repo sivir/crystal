@@ -1,4 +1,4 @@
-import { APILCUChallenge, useStaticData } from "@/data_context";
+import { APILCUChallenge, useStaticData, APIMasteryDataEntry } from "@/data_context";
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { challenge_icon, classes } from "@/lib/utils";
@@ -10,13 +10,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
+import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 
 const VARIETYS_OVERRATED_ID = 303408;
+
+const default_mastery_data: APIMasteryDataEntry = {
+	championId: 0,
+	championLevel: 0,
+	championPoints: 0,
+	championPointsSinceLastLevel: 0,
+	championPointsUntilNextLevel: 0,
+	markRequiredForNextLevel: 0,
+	milestoneGrades: [],
+	nextSeasonMilestone: {
+		requireGradeCounts: {}
+	},
+	tokensEarned: 0
+};
 
 export default function TeamBuilder() {
 	const { static_data } = useStaticData();
 	const [selected_challenges, set_selected_challenges] = useState<number[]>([]);
 	const [selected_role, set_selected_role] = useState<string>("Mage");
+	const [sort_method, set_sort_method] = useState<"name" | "mastery">("name");
 
 	const harmony_challenges = useMemo(() => Object.values(static_data.lcu_data).filter((c) => c.capstoneGroupName === "Harmony" && !c.isCapstone), [static_data.lcu_data]);
 	const globetrotter_challenges = useMemo(() => Object.values(static_data.lcu_data).filter((c) => c.capstoneGroupName === "Globetrotter" && !c.isCapstone), [static_data.lcu_data]);
@@ -56,9 +72,23 @@ export default function TeamBuilder() {
 			if (a.is_filtered !== b.is_filtered) {
 				return a.is_filtered ? 1 : -1;
 			}
+
+			if (sort_method === "mastery") {
+				const a_mastery = static_data.mastery_data.find(m => m.championId === a.id) || default_mastery_data;
+				const b_mastery = static_data.mastery_data.find(m => m.championId === b.id) || default_mastery_data;
+
+				if (a_mastery.championLevel !== b_mastery.championLevel) {
+					return b_mastery.championLevel - a_mastery.championLevel;
+				}
+
+				if (a_mastery.championPoints !== b_mastery.championPoints) {
+					return b_mastery.championPoints - a_mastery.championPoints;
+				}
+			}
+
 			return a.name.localeCompare(b.name);
 		});
-	}, [filtered_champions]);
+	}, [filtered_champions, sort_method, static_data.mastery_data]);
 
 	const champion_list = useMemo(() => {
 		return sorted_champions.filter((champion) => !champion.is_filtered).map((champion) => champion.name).join(", ");
@@ -123,17 +153,27 @@ export default function TeamBuilder() {
 	return (
 		<div className="flex h-[calc(100vh-5rem)] overflow-hidden">
 			<div className="flex-1 p-6 overflow-y-auto">
-				<h1 className="text-3xl font-bold mb-6">Team Builder</h1>
-				<div className="grid grid-cols-[repeat(auto-fill,minmax(3rem,1fr))] gap-1">
-					{sorted_champions.map((champion) => (
-						<div key={champion.id} className={`${champion.is_filtered ? "opacity-30 grayscale" : "opacity-100"}`} title={champion.name}>
-							<img
-								src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champion.id}.png`}
-								alt={champion.name}
-								className="w-12 h-12 rounded"
-							/>
-						</div>
-					))}
+				<div className="flex items-center justify-between mb-6">
+					<h1 className="text-3xl font-bold">Team Builder</h1>
+					<Select value={sort_method} onValueChange={(v) => set_sort_method(v as "name" | "mastery")}>
+						<SelectTrigger className="w-[180px]">
+							<SelectValue placeholder="Sort by" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="name">Name</SelectItem>
+							<SelectItem value="mastery">Mastery</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(3rem,1fr))] gap-2">
+					{sorted_champions.map((champion) => {
+						const mastery_data = static_data.mastery_data.find(m => m.championId === champion.id) || { ...default_mastery_data, championId: champion.id };
+						return (
+							<div key={champion.id} className={`${champion.is_filtered ? "opacity-30 grayscale" : "opacity-100"}`} title={champion.name}>
+								<ChampionMasteryIcon data={mastery_data} className="w-12 h-12" />
+							</div>
+						);
+					})}
 				</div>
 			</div>
 
