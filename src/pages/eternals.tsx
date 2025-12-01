@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { lcu_get_request, SortDirection, classes } from "@/lib/utils";
+import { SortDirection, classes } from "@/lib/utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,24 +12,7 @@ import { Input } from "@/components/ui/input";
 import { FilterDropdown } from "@/components/filter_dropdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-
-type APIEternalsSeries = {
-	itemId: number;
-	name: string;
-	statstones: {
-		description: string;
-		formattedValue: string;
-		isRetired: boolean;
-		name: string;
-		playerRecord?: {
-			value: number;
-		};
-		statstoneId: string;
-	}[];
-	stonesOwned: number;
-};
-
-type APIEternalsData = APIEternalsSeries[];
+import { useLoading } from "@/lib/loading_state.ts";
 
 type EternalProgress = {
 	item_id: number;
@@ -62,42 +45,18 @@ type SortKey = "champion" | "starter" | "series1" | "series2";
 
 export default function Eternals() {
 	const { static_data } = useStaticData();
-	const [eternals_data, set_eternals_data] = useState<Map<number, APIEternalsData>>(new Map());
+	const { is_loading, loading_progress } = useLoading();
 	const [table_data, set_table_data] = useState<ChampionEternalsRow[]>([]);
-	const [loading, set_loading] = useState<boolean>(true);
 	const [sort_key, set_sort_key] = useState<SortKey>("starter");
 	const [sort_direction, set_sort_direction] = useState<SortDirection>("desc");
 	const [search, set_search] = useState<string>("");
 	const [selected_roles, set_selected_roles] = useState<string[]>([]);
 	const [hide_completed, set_hide_completed] = useState<boolean>(false);
-	const [loaded, set_loaded] = useState<number>(0);
-
-	useEffect(() => {
-		if (static_data.connected && Object.keys(static_data.champion_map).length > 0) {
-			set_loading(true);
-
-			const promises = Object.keys(static_data.champion_map).map(champion_id => {
-				return lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
-					set_loaded(loaded => loaded + 1);
-					return { champion_id: parseInt(champion_id), eternals };
-				});
-			});
-
-			Promise.all(promises).then(results => {
-				const new_map = new Map<number, APIEternalsData>();
-				results.forEach(({ champion_id, eternals }) => {
-					new_map.set(champion_id, eternals);
-				});
-				set_eternals_data(new_map);
-				set_loading(false);
-			});
-		}
-	}, [static_data.connected, static_data.champion_map]);
 
 	useEffect(() => {
 		const new_table_data = Object.entries(static_data.champion_map).map(([champion_id_str, champion]) => {
 			const champion_id = parseInt(champion_id_str);
-			const eternals_series = eternals_data.get(champion_id);
+			const eternals_series = static_data.eternals_map.get(champion_id);
 
 			if (!eternals_series || eternals_series.length === 0) {
 				return {
@@ -167,7 +126,7 @@ export default function Eternals() {
 		});
 
 		set_table_data(new_table_data);
-	}, [static_data.champion_map, eternals_data, static_data.statstones_map]);
+	}, [static_data.champion_map, static_data.eternals_map, static_data.statstones_map]);
 
 	const sorted_data = useMemo(() => {
 		return [...table_data].sort((a, b) => {
@@ -178,8 +137,8 @@ export default function Eternals() {
 					comparison = a.champion_name.localeCompare(b.champion_name);
 					break;
 				case "starter":
-					const a_starter = a.series.find(s => s.series_name.toLowerCase().includes("starter"))?.progress_percent || 0;
-					const b_starter = b.series.find(s => s.series_name.toLowerCase().includes("starter"))?.progress_percent || 0;
+					const a_starter = a.series.find(s => !s.series_name.toLowerCase().includes("1") && !s.series_name.toLowerCase().includes("2"))?.progress_percent || 0;
+					const b_starter = b.series.find(s => !s.series_name.toLowerCase().includes("1") && !s.series_name.toLowerCase().includes("2"))?.progress_percent || 0;
 					comparison = a_starter - b_starter;
 					break;
 				case "series1":
@@ -229,10 +188,10 @@ export default function Eternals() {
 		return sort_direction === "asc" ? <ArrowUp className="inline w-4 h-4" /> : <ArrowDown className="inline w-4 h-4" />;
 	};
 
-	if (loading) {
+	if (is_loading && static_data.eternals_map.size === 0) {
 		return (
 			<div className="p-6 space-y-4">
-				<Progress value={loaded / Object.keys(static_data.champion_map).length * 100} />
+				<Progress value={loading_progress} />
 				<Skeleton className="h-8 w-64" />
 				<Skeleton className="h-96 w-full" />
 			</div>

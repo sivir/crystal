@@ -1,39 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { lcu_get_request, SortDirection } from "@/lib/utils";
+import { SortDirection } from "@/lib/utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-type APIMinimalSkin = {
-	championId: number;
-	id: number;
-	isBase: boolean;
-	ownership: {
-		owned: boolean;
-	};
-};
-
-type APICurrentSummoner = {
-	summonerId: number;
-	accountId: number;
-	displayName: string;
-	gameName: string;
-	tagLine: string;
-	puuid: string;
-};
-
-type APILootData = {
-	playerLoot: {
-		[id: string]: {
-			parentStoreItemId: number;
-			storeItemId: number;
-		};
-	};
-};
 
 type Skin = {
 	id: number;
@@ -108,37 +81,17 @@ type SortKey = "champion" | "total" | "owned" | "loot" | "owned_plus_loot" | "un
 
 export default function Skins() {
 	const { static_data } = useStaticData();
-	const [all_skins_api, set_all_skins_api] = useState<APIMinimalSkin[]>([]);
-	const [loot_data_api, set_loot_data_api] = useState<APILootData["playerLoot"]>({});
-	const [loading, set_loading] = useState<boolean>(true);
 	const [sort_key, set_sort_key] = useState<SortKey>("owned");
 	const [sort_direction, set_sort_direction] = useState<SortDirection>("desc");
 	const [table_data, set_table_data] = useState<ChampionSkinRow[]>([]);
 
-	useEffect(() => {
-		if (static_data.connected && Object.keys(static_data.champion_map).length > 0) {
-			set_loading(true);
-			const skins_promise = lcu_get_request<APICurrentSummoner>("/lol-summoner/v1/current-summoner").then(current_summoner => {
-				lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${current_summoner.summonerId}/skins-minimal`).then(skins => {
-					set_all_skins_api(skins);
-				});
-			});
-			const loot_promise = lcu_get_request<APILootData>("/lol-loot/v2/player-loot-map").then(loot => {
-				set_loot_data_api(loot.playerLoot);
-			});
-			Promise.all([skins_promise, loot_promise]).then(() => {
-				set_loading(false);
-			});
-		}
-	}, [static_data.connected, static_data.champion_map]);
-
 	const all_skins = useMemo<Skin[]>(() => {
 		const loot_skin_ids = new Set<number>();
-		Object.values(loot_data_api).forEach(item => {
+		Object.values(static_data.loot_data).forEach(item => {
 			loot_skin_ids.add(item.storeItemId);
 		});
 
-		return all_skins_api.map(skin => {
+		return static_data.minimal_skins.map(skin => {
 			const metadata = static_data.skin_map[skin.id];
 			return {
 				id: skin.id,
@@ -151,7 +104,7 @@ export default function Skins() {
 				in_loot: loot_skin_ids.has(skin.id),
 			};
 		});
-	}, [all_skins_api, loot_data_api, static_data.skin_map]);
+	}, [static_data.minimal_skins, static_data.loot_data, static_data.skin_map]);
 
 	const owned_skins = useMemo<Skin[]>(() => {
 		return all_skins.filter(skin => skin.owned && !skin.is_base);
@@ -361,7 +314,7 @@ export default function Skins() {
 		return sort_direction === "asc" ? <ArrowUp className="inline w-4 h-4" /> : <ArrowDown className="inline w-4 h-4" />;
 	};
 
-	if (loading) {
+	if (static_data.minimal_skins.length === 0) {
 		return (
 			<div className="p-6">
 				<p>Loading skins data...</p>

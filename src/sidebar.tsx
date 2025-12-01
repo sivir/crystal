@@ -10,6 +10,8 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 import { useTheme } from "@/theme-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Progress } from "@/components/ui/progress.tsx";
+import { useLoading } from "./lib/loading_state";
 
 export const items: { title: string, url: page_name, icon: any }[] = [
 	{
@@ -91,6 +93,7 @@ async function app_icon(): Promise<string> {
 
 export function AppSidebar() {
 	const { static_data, setStaticData } = useStaticData();
+	const { is_loading, loading_progress } = useLoading();
 	const [image_src, set_image_src] = useState<string>("");
 	const [version, setVersion] = useState<string>("");
 
@@ -137,10 +140,15 @@ export function AppSidebar() {
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="flex items-center flex-row gap-1">
+			<SidebarFooter className="flex items-center flex-row gap-1 relative">
+				{is_loading && (
+					<div className="w-full px-2 mb-2 absolute bottom-12 left-0">
+						<Progress value={loading_progress} className="h-1" />
+					</div>
+				)}
 				<ModeToggle />
-				<Button variant="outline" size="icon" onClick={() => refresh_data(setStaticData)}>
-					<RefreshCcw className="h-2 w-2" />
+				<Button variant="outline" size="icon" onClick={() => refresh_data(setStaticData, static_data.champion_map)}>
+					<RefreshCcw className={`h-2 w-2 ${is_loading ? "animate-spin" : ""}`} />
 				</Button>
 				<Badge variant={static_data.connected ? "success" : "destructive"}>
 					{static_data.connected ? "connected" : "disconnected"}
