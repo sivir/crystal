@@ -1,4 +1,4 @@
-import { useStaticData, useSessionData, APIChampSelectPlayer } from "@/data_context";
+import { useStaticData, useSessionData, APIChampSelectPlayer, default_mastery_data } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
 import { champion_name, lcu_get_request } from "@/lib/utils.ts";
 
@@ -104,7 +104,7 @@ export default function Lobby() {
 												<TableRow key={champion_id}>
 													<TableCell>
 														<div className="flex items-center gap-2">
-															<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion_id)} className="w-8 h-8" />
+															<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion_id) ?? default_mastery_data} className="w-8 h-8" />
 															{champion_name(champion_id, static_data.champion_map)}
 														</div>
 													</TableCell>

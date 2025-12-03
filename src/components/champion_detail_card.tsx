@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useStaticData, APIMasteryDataEntry } from "@/data_context";
+import { useStaticData, default_mastery_data } from "@/data_context";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -7,20 +7,6 @@ import { Check, X } from "lucide-react";
 import { challenge_icon, mastery_color } from "@/lib/utils";
 
 const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
-
-const default_mastery_data: APIMasteryDataEntry = {
-	championId: 0,
-	championLevel: 0,
-	championPoints: 0,
-	championPointsSinceLastLevel: 0,
-	championPointsUntilNextLevel: 0,
-	markRequiredForNextLevel: 0,
-	milestoneGrades: [],
-	nextSeasonMilestone: {
-		requireGradeCounts: {}
-	},
-	tokensEarned: 0
-};
 
 export function ChampionDetailCard({ champion_id }: { champion_id: number }) {
 	const { static_data, has_lcu_data } = useStaticData();
@@ -103,7 +89,7 @@ export function ChampionDetailCard({ champion_id }: { champion_id: number }) {
 		[static_data.lcu_data, champion_id, has_lcu_data]
 	);
 
-	const totalPointsNeeded = mastery_data.championPointsSinceLastLevel + Math.max(0, mastery_data.championPointsUntilNextLevel);
+	const totalPointsNeeded = mastery_data.championPointsSinceLastLevel + mastery_data.championPointsUntilNextLevel;
 	const progress = totalPointsNeeded > 0 ? (mastery_data.championPointsSinceLastLevel / totalPointsNeeded) * 100 : 100;
 
 	if (!champion) {
@@ -142,11 +128,7 @@ export function ChampionDetailCard({ champion_id }: { champion_id: number }) {
 				<div className="space-y-1">
 					<div className="flex justify-between text-xs text-muted-foreground">
 						<span>{mastery_data.championPoints.toLocaleString()} points</span>
-						{mastery_data.championPointsUntilNextLevel > 0 ? (
-							<span>{mastery_data.championPointsSinceLastLevel.toLocaleString()} / {totalPointsNeeded.toLocaleString()}</span>
-						) : (
-							<span>Max Level</span>
-						)}
+						<span>{mastery_data.championPointsSinceLastLevel.toLocaleString()} / {totalPointsNeeded.toLocaleString()}</span>
 					</div>
 					<Progress value={progress} className="h-1.5" />
 				</div>
