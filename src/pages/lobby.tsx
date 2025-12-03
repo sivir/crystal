@@ -1,12 +1,16 @@
 import { useStaticData, useSessionData, APIChampSelectPlayer } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
-import { champion_name, lcu_get_request } from "@/lib/utils.ts";
+import { champion_name, lcu_get_request, mastery_color } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, X } from "lucide-react";
+import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
+import { APIMasteryDataEntry } from "@/data_context";
+
+
 
 const ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID = 602002; // arena (win on all champs)
 const ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID = 101301; // aram (s- or better on all champs)
@@ -24,23 +28,6 @@ type ChampionMasteryDisplay = {
 	points_until_next_level: number;
 	is_completed?: boolean; // For challenge completion
 };
-
-// Mastery level colors (same as champions.tsx)
-const mastery_colors: Record<number, string> = {
-	10: "bg-orange-500 hover:bg-orange-600 text-white border-transparent",
-	9: "bg-purple-500 hover:bg-purple-600 text-white border-transparent",
-	8: "bg-pink-500 hover:bg-pink-600 text-white border-transparent",
-	7: "bg-blue-500 hover:bg-blue-600 text-white border-transparent",
-	6: "bg-green-500 hover:bg-green-600 text-white border-transparent",
-	5: "bg-gray-500 hover:bg-gray-600 text-white border-transparent"
-};
-
-function mastery_color(level: number): string {
-	if (level >= 10) {
-		return mastery_colors[10];
-	}
-	return mastery_colors[level] || "";
-}
 
 const queue_ids: Record<number, string> = {
 	1700: "arena",

@@ -530,7 +530,7 @@ export default function Skins() {
 											<TableCell colSpan={6} className="bg-muted/30 p-6">
 												<div className="grid grid-cols-3 gap-6">
 													<div>
-														<h4 className="font-semibold mb-3 text-green-600 dark:text-green-400">
+														<h4 className="font-semibold mb-3">
 															Owned Skins ({row.owned_skins.length})
 														</h4>
 														<div className="space-y-2 max-h-96 overflow-y-auto">
@@ -550,7 +550,7 @@ export default function Skins() {
 														</div>
 													</div>
 													<div>
-														<h4 className="font-semibold mb-3 text-blue-600 dark:text-blue-400">
+														<h4 className="font-semibold mb-3 text-green-600 dark:text-green-400">
 															In Loot ({row.loot_skins.length})
 														</h4>
 														<div className="space-y-2 max-h-96 overflow-y-auto">

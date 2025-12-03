@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { APIMasteryDataEntry, useStaticData } from "@/data_context.tsx";
-import { challenge_icon, SortDirection, classes } from "@/lib/utils.ts";
+import { challenge_icon, SortDirection, classes, mastery_color } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,22 +41,6 @@ const default_mastery_data: APIMasteryDataEntry = {
 	},
 	tokensEarned: 0
 };
-
-const mastery_colors: { [key: number]: string } = {
-	10: "bg-red-500 hover:bg-red-600 text-white border-transparent",
-	9: "bg-orange-500 hover:bg-orange-600 text-white border-transparent",
-	8: "bg-purple-500 hover:bg-purple-600 text-white border-transparent",
-	7: "bg-blue-500 hover:bg-blue-600 text-white border-transparent",
-	6: "bg-green-500 hover:bg-green-600 text-white border-transparent",
-	5: "bg-gray-500 hover:bg-gray-600 text-white border-transparent"
-};
-
-function mastery_color(level: number): string {
-	if (level >= 10) {
-		return mastery_colors[10];
-	}
-	return mastery_colors[level] || "";
-}
 
 export default function Champions() {
 	const { static_data, has_lcu_data } = useStaticData();
