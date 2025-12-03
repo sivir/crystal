@@ -1,103 +1,59 @@
 import { useStaticData, useSessionData, APIChampSelectPlayer } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
-import { champion_name, lcu_get_request, mastery_color } from "@/lib/utils.ts";
+import { champion_name, lcu_get_request } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, X } from "lucide-react";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
-import { APIMasteryDataEntry } from "@/data_context";
-
-
 
 const ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID = 602002; // arena (win on all champs)
 const ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID = 101301; // aram (s- or better on all champs)
 
-type CrowdFavoriteChampion = {
-	champion_id: number;
-	is_completed: boolean;
-};
+const ARENA_QUEUE_ID = 1700;
+const ARAM_QUEUE_ID = 450;
+const ARAM_MAYHEM_QUEUE_ID = 2400;
 
-type ChampionMasteryDisplay = {
+type TableChampion = {
 	champion_id: number;
-	mastery_level: number;
-	mastery_points: number;
-	points_since_last_level: number;
-	points_until_next_level: number;
-	is_completed?: boolean; // For challenge completion
+	is_completed?: boolean;
 };
-
-const queue_ids: Record<number, string> = {
-	1700: "arena",
-	450: "aram",
-	2400: "aram-mayhem"
-}
 
 export default function Lobby() {
 	const { static_data, has_lcu_data } = useStaticData();
 	const { session_data } = useSessionData();
-	const [crowd_favorites, set_crowd_favorites] = useState<number[]>([]);
+	const [table_champions, set_table_champions] = useState<TableChampion[]>([]);
 
 	const game_mode = useMemo(() => {
-		if (!session_data.gameflow_session) {
-			return null;
-		}
-		const queue_id = session_data.gameflow_session.gameData?.queue?.id ?? -1;
-		return queue_ids[queue_id] ?? null;
+		return session_data.gameflow_session?.gameData?.queue?.id ?? -1;
 	}, [session_data.gameflow_session]);
 
-	const arena_champ_select = game_mode === "arena" && session_data.gameflow_session?.phase == "ChampSelect";
-	const isInAramChampSelect = (game_mode === "aram" || game_mode === "aram-mayhem") && session_data.gameflow_session?.phase == "ChampSelect";
-	const isAramMayhem = game_mode === "aram-mayhem";
+	const in_champ_select = session_data.gameflow_session?.phase == "ChampSelect";
+	const supported_mode = game_mode == ARENA_QUEUE_ID || game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID;
 
 	useEffect(() => {
-		if (arena_champ_select && static_data.connected) {
-			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list").then((response) => { // typo is intentional
-				console.log("Crowd favorite champions:", response);
-				set_crowd_favorites(response);
-			});
-		} else {
-			set_crowd_favorites([]);
+		if (!in_champ_select || !supported_mode) {
+			set_table_champions([]);
+			return;
 		}
-	}, [arena_champ_select, static_data.connected]);
-
-	// Get ARAM champions (team + bench)
-	const aram_champions = useMemo<ChampionMasteryDisplay[]>(() => {
-		if (!isInAramChampSelect || !session_data.champ_select_session) return [];
-
-		const session = session_data.champ_select_session;
-		const champion_ids = session.myTeam.map((player: APIChampSelectPlayer) => player.championId).concat(session.benchChampions.map((benchChamp: any) => benchChamp.championId)).filter(id => id > 0);
-
-		const aramChallenge = !isAramMayhem ? static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID] : null;
-
-		return champion_ids.map(champion_id => {
-			const masteryData = static_data.mastery_data.find(m => m.championId === champion_id);
-			return {
-				champion_id,
-				mastery_level: masteryData?.championLevel || 0,
-				mastery_points: masteryData?.championPoints || 0,
-				points_since_last_level: masteryData?.championPointsSinceLastLevel || 0,
-				points_until_next_level: masteryData?.championPointsUntilNextLevel || 0,
-				is_completed: aramChallenge ? aramChallenge.completedIds.includes(champion_id) : undefined
-			};
-		}).sort((a, b) => {
-			// Sort by mastery level desc, then mastery points desc
-			if (a.mastery_level !== b.mastery_level) {
-				return b.mastery_level - a.mastery_level;
-			}
-			return b.mastery_points - a.mastery_points;
-		});
-	}, [isInAramChampSelect, session_data.champ_select_session, static_data.mastery_data, static_data.lcu_data, isAramMayhem]);
-
-	// Get crowd favorite champions with completion status
-	const crowd_favorite_data = useMemo<CrowdFavoriteChampion[]>(() => {
-		return crowd_favorites.map(champion_id => ({
-			champion_id,
-			is_completed: static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID].completedIds.includes(champion_id)
-		}));
-	}, [crowd_favorites, static_data.lcu_data]);
+		if (game_mode == ARENA_QUEUE_ID) {
+			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list").then((response) => { // typo is intentional
+				set_table_champions(response.map(champion_id => ({
+					champion_id,
+					is_completed: static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID].completedIds.includes(champion_id)
+				})));
+			});
+		}
+		if (game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID) {
+			set_table_champions(session_data.champ_select_session?.myTeam.map((player: APIChampSelectPlayer) => ({
+				champion_id: player.championId,
+				is_completed: static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID].completedIds.includes(player.championId)
+			})).concat(session_data.champ_select_session?.benchChampions.map((benchChamp: any) => ({
+				champion_id: benchChamp.championId,
+				is_completed: static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID].completedIds.includes(benchChamp.championId)
+			}))).filter(champion => champion.champion_id > 0) ?? []);
+		}
+	}, [in_champ_select, game_mode, session_data.champ_select_session]);
 
 	return (
 		<div className="p-6 space-y-6">
@@ -111,7 +67,7 @@ export default function Lobby() {
 				</Card>
 			)}
 
-			{static_data.connected && !arena_champ_select && !isInAramChampSelect && (
+			{static_data.connected && !in_champ_select && (
 				<Card>
 					<CardContent className="pt-6">
 						<p className="text-muted-foreground">Not in champion select for Arena or ARAM</p>
@@ -119,142 +75,46 @@ export default function Lobby() {
 				</Card>
 			)}
 
-			{static_data.connected && arena_champ_select && (
+			{static_data.connected && in_champ_select && supported_mode && (
 				<Card>
 					<CardHeader>
-						<CardTitle>Arena Crowd Favorites</CardTitle>
+						<CardTitle>{game_mode == ARENA_QUEUE_ID ? "Arena" : "ARAM"} Champion Progress</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{!has_lcu_data ? (
 							<p className="text-muted-foreground">Loading challenge data...</p>
-						) : !static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID] ? (
+						) : !has_lcu_data ? (
 							<p className="text-muted-foreground">Challenge data not available</p>
-						) : crowd_favorite_data.length === 0 ? (
+						) : table_champions.length === 0 ? (
 							<p className="text-muted-foreground">
-								Loading crowd favorites... Make sure you're in Arena champion select.
+								Loading champions...
 							</p>
 						) : (
 							<div className="space-y-2">
-								<p className="text-sm text-muted-foreground">
-									{crowd_favorite_data.filter(c => c.is_completed).length} of {crowd_favorite_data.length} completed
-								</p>
 								<div className="rounded-md border">
 									<Table>
 										<TableHeader>
 											<TableRow>
 												<TableHead>Champion</TableHead>
-												<TableHead className="text-center">Completed</TableHead>
+												{game_mode != ARAM_MAYHEM_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
 											</TableRow>
 										</TableHeader>
 										<TableBody>
-											{crowd_favorite_data.map(({ champion_id, is_completed }) => (
+											{table_champions.map(({ champion_id, is_completed }) => (
 												<TableRow key={champion_id}>
 													<TableCell>
 														<div className="flex items-center gap-2">
-															<img
-																src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champion_id}.png`}
-																alt={champion_name(champion_id, static_data.champion_map)}
-																className="w-8 h-8 rounded"
-															/>
-															<span>{champion_name(champion_id, static_data.champion_map)}</span>
+															<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion_id)} className="w-8 h-8" />
+															{champion_name(champion_id, static_data.champion_map)}
 														</div>
 													</TableCell>
-													<TableCell className="text-center">
+													{game_mode != ARAM_MAYHEM_QUEUE_ID &&  <TableCell className="text-center">
 														{is_completed ? (
 															<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
 														) : (
 															<X className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto" />
 														)}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			)}
-
-			{static_data.connected && isInAramChampSelect && (
-				<Card>
-					<CardHeader>
-						<CardTitle>ARAM Champions {isAramMayhem && "(Mayhem)"}</CardTitle>
-					</CardHeader>
-					<CardContent>
-						{!has_lcu_data ? (
-							<p className="text-muted-foreground">Loading challenge data...</p>
-						) : aram_champions.length === 0 ? (
-							<p className="text-muted-foreground">
-								Loading champions... Make sure you're in ARAM champion select.
-							</p>
-						) : (
-							<div className="space-y-2">
-								{!isAramMayhem && (
-									<p className="text-sm text-muted-foreground">
-										All Random All Champions: {aram_champions.filter(c => c.is_completed).length} of {aram_champions.length} completed
-									</p>
-								)}
-								<div className="rounded-md border">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Champion</TableHead>
-												<TableHead>Mastery</TableHead>
-												<TableHead>Points to Next Level</TableHead>
-												{!isAramMayhem && <TableHead className="text-center">S- or Better</TableHead>}
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{aram_champions.map((champ) => (
-												<TableRow key={champ.champion_id}>
-													<TableCell>
-														<div className="flex items-center gap-2">
-															<img
-																src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champ.champion_id}.png`}
-																alt={champion_name(champ.champion_id, static_data.champion_map)}
-																className="w-8 h-8 rounded"
-															/>
-															<span>{champion_name(champ.champion_id, static_data.champion_map)}</span>
-														</div>
-													</TableCell>
-													<TableCell>
-														<Badge className={mastery_color(champ.mastery_level)}>
-															{champ.mastery_level}
-														</Badge>{" "}
-														{champ.mastery_points.toLocaleString()}
-													</TableCell>
-													<TableCell>
-														<Tooltip>
-															<TooltipTrigger asChild>
-																<div>
-																	<div className="flex items-center gap-2">
-																		<div className="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
-																			<div
-																				className={`h-1 rounded-full ${champ.points_until_next_level <= 0 ? 'bg-green-500' : 'bg-black'}`}
-																				style={{
-																					width: `${(champ.points_since_last_level / (champ.points_since_last_level + Math.max(0, champ.points_until_next_level))) * 100}%`
-																				}}
-																			></div>
-																		</div>
-																	</div>
-																</div>
-															</TooltipTrigger>
-															<TooltipContent>
-																<p>{champ.points_since_last_level}/{champ.points_since_last_level + champ.points_until_next_level}</p>
-															</TooltipContent>
-														</Tooltip>
-													</TableCell>
-													{!isAramMayhem && (
-														<TableCell className="text-center">
-															{champ.is_completed ? (
-																<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
-															) : (
-																<X className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto" />
-															)}
-														</TableCell>
-													)}
+													</TableCell>}
 												</TableRow>
 											))}
 										</TableBody>
