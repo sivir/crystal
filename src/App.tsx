@@ -40,53 +40,43 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 		setLoading(true, (completed_tasks / total_tasks) * 100);
 	};
 
-	promises.push(
-		lcu_get_request<APILCUChallengeMap>("/lol-challenges/v1/challenges/local-player").then(lcu_data => {
-			console.log("lcu_data", lcu_data);
-			setStaticData(prev => ({ ...prev, lcu_data: lcu_data }));
-			update_progress();
-		})
-	);
+	promises.push(lcu_get_request<APILCUChallengeMap>("/lol-challenges/v1/challenges/local-player").then(lcu_data => {
+		console.log("lcu_data", lcu_data);
+		setStaticData(prev => ({ ...prev, lcu_data: lcu_data }));
+		update_progress();
+	}));
 
-	promises.push(
-		lcu_get_request<APISummonerData>("/lol-summoner/v1/current-summoner").then(summoner_data => {
-			// Fetch skins using summonerId
-			lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${summoner_data.summonerId}/skins-minimal`).then(skins => {
-				setStaticData(prev => ({ ...prev, minimal_skins: skins }));
-			});
+	promises.push(lcu_get_request<APISummonerData>("/lol-summoner/v1/current-summoner").then(async summoner_data => {
+		// Fetch skins using summonerId
+		lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${summoner_data.summonerId}/skins-minimal`).then(skins => {
+			setStaticData(prev => ({ ...prev, minimal_skins: skins }));
+		});
 
-			return lcu_get_request<APIRegionLocale>("/riotclient/region-locale").then(region_data => {
-				return supabase_invoke<APIDatabaseData>("get-user", { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() }).then(database_data => {
-					if (database_data.data) {
-						console.log("riot_data", database_data.data.riot_data);
-						setStaticData(prev => ({ ...prev, riot_data: database_data.data.riot_data, mastery_data: database_data.data.mastery_data }));
-					}
-					update_progress();
-				});
-			});
-		})
-	);
+		const region_data = await lcu_get_request<APIRegionLocale>("/riotclient/region-locale");
+		const database_data = await supabase_invoke<APIDatabaseData>("get-user", { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() });
+		if (database_data.data) {
+			console.log("riot_data", database_data.data.riot_data);
+			setStaticData(prev => ({ ...prev, riot_data: database_data.data.riot_data, mastery_data: database_data.data.mastery_data }));
+		}
+		update_progress();
+	}));
 
 	// Loot Data
-	promises.push(
-		lcu_get_request<APILootData>("/lol-loot/v2/player-loot-map").then(loot => {
-			setStaticData(prev => ({ ...prev, loot_data: loot.playerLoot }));
-			update_progress();
-		})
-	);
+	promises.push(lcu_get_request<APILootData>("/lol-loot/v2/player-loot-map").then(loot => {
+		setStaticData(prev => ({ ...prev, loot_data: loot.playerLoot }));
+		update_progress();
+	}));
 
 	if (champion_map) {
 		Object.keys(champion_map).forEach(champion_id => {
-			promises.push(
-				lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
-					setStaticData(prev => {
-						const new_map = new Map(prev.eternals_map);
-						new_map.set(parseInt(champion_id), eternals);
-						return { ...prev, eternals_map: new_map };
-					});
-					update_progress();
-				})
-			);
+			promises.push(lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
+				setStaticData(prev => {
+					const new_map = new Map(prev.eternals_map);
+					new_map.set(parseInt(champion_id), eternals);
+					return { ...prev, eternals_map: new_map };
+				});
+				update_progress();
+			}));
 		});
 	}
 

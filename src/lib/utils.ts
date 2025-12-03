@@ -53,3 +53,37 @@ export function champion_name(id: number, champion_map: APIChampionSummaryMap) {
 }
 
 export const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];
+
+// Mastery level colors for badges
+export const mastery_colors: { [key: number]: string } = {
+	10: "bg-red-500 hover:bg-red-600 text-white border-transparent",
+	9: "bg-orange-500 hover:bg-orange-600 text-white border-transparent",
+	8: "bg-purple-500 hover:bg-purple-600 text-white border-transparent",
+	7: "bg-blue-500 hover:bg-blue-600 text-white border-transparent",
+	6: "bg-green-500 hover:bg-green-600 text-white border-transparent",
+	5: "bg-gray-500 hover:bg-gray-600 text-white border-transparent"
+};
+
+// Mastery level colors for icons (without hover/border states)
+export const mastery_icon_colors: { [key: number]: string } = {
+	10: "bg-red-500",
+	9: "bg-orange-500",
+	8: "bg-purple-500",
+	7: "bg-blue-500",
+	6: "bg-green-500",
+	5: "bg-gray-500"
+};
+
+export function mastery_color(level: number): string {
+	if (level >= 10) {
+		return mastery_colors[10];
+	}
+	return mastery_colors[level] || "";
+}
+
+export function mastery_icon_color(level: number): string {
+	if (level >= 10) {
+		return mastery_icon_colors[10];
+	}
+	return mastery_icon_colors[level] || "bg-gray-500";
+}
