@@ -18,6 +18,20 @@ export type APIMasteryDataEntry = {
 	tokensEarned: number;
 };
 
+export const default_mastery_data: APIMasteryDataEntry = {
+	championId: 0,
+	championLevel: 0,
+	championPoints: 0,
+	championPointsSinceLastLevel: 0,
+	championPointsUntilNextLevel: 0,
+	markRequiredForNextLevel: 0,
+	milestoneGrades: [],
+	nextSeasonMilestone: {
+		requireGradeCounts: {}
+	},
+	tokensEarned: 0
+}
+
 export type APIDatabaseData = {
 	riot_data: any;
 	mastery_data: APIMasteryDataEntry[];

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIChampionSummaryMap, APIMinimalSkin, APILootData } from "@/data_context.tsx";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 import { setLoading } from "@/lib/loading_state.ts";
@@ -28,12 +28,13 @@ const page_components: Record<page_name, React.ComponentType> = {
 	"user": User,
 }
 
-export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<StaticData>>, champion_map?: APIChampionSummaryMap) {
+export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<StaticData>>, static_data: StaticData) {
+	console.log("refreshing");
 	setLoading(true, 0);
 
 	const promises: Promise<any>[] = [];
 	let completed_tasks = 0;
-	const total_tasks = 3 + (champion_map ? Object.keys(champion_map).length : 0);
+	let total_tasks = 3 + Object.keys(static_data.champion_map).length;
 
 	const update_progress = () => {
 		completed_tasks++;
@@ -46,12 +47,18 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 		update_progress();
 	}));
 
+	if (static_data.mastery_data.length === 0) {
+		total_tasks++;
+		promises.push(lcu_get_request<APIMasteryDataEntry[]>("/lol-champion-mastery/v1/local-player/champion-mastery").then(mastery_data => {
+			setStaticData(prev => ({ ...prev, mastery_data: mastery_data }));
+			update_progress();
+		}));
+	}
+
 	promises.push(lcu_get_request<APISummonerData>("/lol-summoner/v1/current-summoner").then(async summoner_data => {
-		// Fetch skins using summonerId
 		lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${summoner_data.summonerId}/skins-minimal`).then(skins => {
 			setStaticData(prev => ({ ...prev, minimal_skins: skins }));
 		});
-
 		const region_data = await lcu_get_request<APIRegionLocale>("/riotclient/region-locale");
 		const database_data = await supabase_invoke<APIDatabaseData>("get-user", { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() });
 		if (database_data.data) {
@@ -61,27 +68,27 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 		update_progress();
 	}));
 
-	// Loot Data
 	promises.push(lcu_get_request<APILootData>("/lol-loot/v2/player-loot-map").then(loot => {
 		setStaticData(prev => ({ ...prev, loot_data: loot.playerLoot }));
 		update_progress();
 	}));
 
-	if (champion_map) {
-		Object.keys(champion_map).forEach(champion_id => {
-			promises.push(lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
-				setStaticData(prev => {
-					const new_map = new Map(prev.eternals_map);
-					new_map.set(parseInt(champion_id), eternals);
-					return { ...prev, eternals_map: new_map };
-				});
-				update_progress();
-			}));
-		});
-	}
+	Object.keys(static_data.champion_map).forEach(champion_id => {
+		promises.push(lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
+			setStaticData(prev => {
+				const new_map = new Map(prev.eternals_map);
+				new_map.set(parseInt(champion_id), eternals);
+				return { ...prev, eternals_map: new_map };
+			});
+			update_progress();
+		}));
+	});
 
 	Promise.all(promises).then(() => {
 		setLoading(false, 100);
+	}).catch((error) => {
+		console.error("Error during refresh_data:", error);
+		setLoading(false, 0);
 	});
 }
 
@@ -91,12 +98,15 @@ export default function App() {
 	const PageComponent = page_components[static_data.page];
 
 	useEffect(() => {
+		refresh_data(setStaticData, static_data);
+	}, [static_data.champion_map]);
+
+	useEffect(() => {
 		console.log("init");
 		
 		invoke<APIChampionSummary[]>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-summary.json" }).then(x => {
 			const champion_map = Object.fromEntries(x.filter(c => c.id > 0 && c.id < 3000).map(c => [c.id, c]));
 			setStaticData(prev => ({ ...prev, champion_map }));
-			refresh_data(setStaticData, champion_map);
 		});
 
 		invoke<boolean>("get_connected").then(x => {
@@ -106,6 +116,7 @@ export default function App() {
 		invoke<APISkinMetadataMap>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skins.json" }).then(x => {
 			setStaticData(prev => ({ ...prev, skin_map: x }));
 		});
+
 		invoke<APIStatstonesData>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/statstones.json" }).then(x => {
 			const statstones_map: StatstonesMap = {};
 			x.statstoneData.forEach(set => {

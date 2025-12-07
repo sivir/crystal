@@ -1,4 +1,4 @@
-import { APILCUChallenge, useStaticData, APIMasteryDataEntry } from "@/data_context";
+import { APILCUChallenge, useStaticData, default_mastery_data } from "@/data_context";
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { challenge_icon, classes } from "@/lib/utils";
@@ -14,25 +14,11 @@ import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 
 const VARIETYS_OVERRATED_ID = 303408;
 
-const default_mastery_data: APIMasteryDataEntry = {
-	championId: 0,
-	championLevel: 0,
-	championPoints: 0,
-	championPointsSinceLastLevel: 0,
-	championPointsUntilNextLevel: 0,
-	markRequiredForNextLevel: 0,
-	milestoneGrades: [],
-	nextSeasonMilestone: {
-		requireGradeCounts: {}
-	},
-	tokensEarned: 0
-};
-
 export default function TeamBuilder() {
 	const { static_data } = useStaticData();
 	const [selected_challenges, set_selected_challenges] = useState<number[]>([]);
 	const [selected_role, set_selected_role] = useState<string>("Mage");
-	const [sort_method, set_sort_method] = useState<"name" | "mastery">("name");
+	const [sort_method, set_sort_method] = useState<"name" | "mastery">("mastery");
 
 	const harmony_challenges = useMemo(() => Object.values(static_data.lcu_data).filter((c) => c.capstoneGroupName === "Harmony" && !c.isCapstone), [static_data.lcu_data]);
 	const globetrotter_challenges = useMemo(() => Object.values(static_data.lcu_data).filter((c) => c.capstoneGroupName === "Globetrotter" && !c.isCapstone), [static_data.lcu_data]);
@@ -57,7 +43,7 @@ export default function TeamBuilder() {
 				if (!challenge) return true;
 
 				if (challenge.id === VARIETYS_OVERRATED_ID) {
-					return champion.roles.includes(selected_role);
+					return champion.roles.includes(selected_role.toLowerCase());
 				}
 
 				return challenge.availableIds.includes(champion.id);
