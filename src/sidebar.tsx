@@ -147,7 +147,7 @@ export function AppSidebar() {
 					</div>
 				)}
 				<ModeToggle />
-				<Button variant="outline" size="icon" onClick={() => refresh_data(setStaticData, static_data.champion_map)}>
+				<Button variant="outline" size="icon" onClick={() => refresh_data(setStaticData, static_data)}>
 					<RefreshCcw className={`h-2 w-2 ${is_loading ? "animate-spin" : ""}`} />
 				</Button>
 				<Badge variant={static_data.connected ? "success" : "destructive"}>
