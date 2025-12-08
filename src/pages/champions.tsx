@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { APIMasteryDataEntry, useStaticData } from "@/data_context.tsx";
+import { default_mastery_data, useStaticData } from "@/data_context.tsx";
 import { challenge_icon, SortDirection, classes, mastery_color } from "@/lib/utils.ts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,20 +27,6 @@ type ChampionTableRow = {
 	points_until_next_level: number;
 	checks: boolean[];
 }
-
-const default_mastery_data: APIMasteryDataEntry = {
-	championId: 0,
-	championLevel: 0,
-	championPoints: 0,
-	championPointsSinceLastLevel: 0,
-	championPointsUntilNextLevel: 0,
-	markRequiredForNextLevel: 0,
-	milestoneGrades: [],
-	nextSeasonMilestone: {
-		requireGradeCounts: {}
-	},
-	tokensEarned: 0
-};
 
 export default function Champions() {
 	const { static_data, has_lcu_data } = useStaticData();

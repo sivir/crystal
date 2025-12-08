@@ -1,14 +1,23 @@
-use irelia::ws::types::EventKind;
-use irelia::ws::Subscriber;
-use irelia::{rest::LcuClient, ws::LcuWebSocket};
-use std::{sync::Arc, thread, time::Duration};
+use irelia::ws::{Subscriber, LcuWebSocket, types::EventKind};
+use irelia::rest::LcuClient;
+use std::{sync::Arc, time::Duration};
 use tauri::{
 	menu::{Menu, MenuItem},
 	tray::TrayIconBuilder,
 	AppHandle, Emitter, Manager, State
 };
-use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
+
+struct LcuEventHandler {
+	app_handle: AppHandle,
+	event_name: &'static str,
+}
+
+impl Subscriber for LcuEventHandler {
+	fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
+		let _ = self.app_handle.emit(self.event_name, event.2.clone());
+	}
+}
 
 pub struct Data {
 	pub lcu_client: Option<LcuClient<irelia::requests::RequestClientType>>,
@@ -26,37 +35,20 @@ impl Data {
 	}
 
 	fn connect(&mut self, app_handle: AppHandle) -> Result<(), irelia::requests::Error> {
-		struct ChampSelectEventHandler {
-			app_handle: AppHandle,
-		}
+		self.lcu_client = Some(LcuClient::connect()?);
 
-		impl Subscriber for ChampSelectEventHandler {
-			fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
-				self.app_handle.emit("champ-select", event.2.clone()).unwrap();
-			}
-		}
+		let mut ws_client = LcuWebSocket::new();
+		ws_client.subscribe(
+			EventKind::json_api_event_callback("/lol-champ-select/v1/session"),
+			LcuEventHandler { app_handle: app_handle.clone(), event_name: "champ-select" },
+		);
+		ws_client.subscribe(
+			EventKind::json_api_event_callback("/lol-gameflow/v1/session"),
+			LcuEventHandler { app_handle: app_handle.clone(), event_name: "gameflow" },
+		);
+		self.ws_client = Some(ws_client);
 
-		struct GameflowEventHandler {
-			app_handle: AppHandle,
-		}
-
-		impl Subscriber for GameflowEventHandler {
-			fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
-				self.app_handle.emit("gameflow", event.2.clone()).unwrap();
-			}
-		}
-
-		match LcuClient::connect() {
-			Ok(client) => {
-				self.lcu_client = Some(client);
-				let mut ws_client = LcuWebSocket::new();
-				ws_client.subscribe(EventKind::json_api_event_callback("/lol-champ-select/v1/session"), ChampSelectEventHandler { app_handle: app_handle.clone() });
-				ws_client.subscribe(EventKind::json_api_event_callback("/lol-gameflow/v1/session"), GameflowEventHandler { app_handle: app_handle.clone() });
-				self.ws_client = Some(ws_client);
-				Ok(())
-			}
-			Err(e) => Err(e),
-		}
+		Ok(())
 	}
 }
 
@@ -130,44 +122,41 @@ pub fn run() {
 
 			let thread_state = state.clone();
 			let app_handle = app.app_handle().clone();
-			let rt = Runtime::new().unwrap();
-			thread::spawn(move || {
-				rt.block_on(async {
-					loop {
-						let mut state = thread_state.lock().await;
 
-						if !state.connected {
-							match state.connect(app_handle.clone()) {
-								Ok(()) => {
-									println!("Successfully connected to League client");
-									state.connected = true;
-									app_handle.emit("connection", true).unwrap();
-								}
-								Err(e) => println!("{}", e),
+			tauri::async_runtime::spawn(async move {
+				loop {
+					let mut state = thread_state.lock().await;
+
+					if !state.connected {
+						match state.connect(app_handle.clone()) {
+							Ok(()) => {
+								println!("Successfully connected to League client");
+								state.connected = true;
+								app_handle.emit("connection", true).unwrap();
 							}
-						} else {
-							if let Some(client) = &state.lcu_client {
-								if let Err(_) = client.get::<String>("/riotclient/auth-token").await {
-									println!("Lost connection to League client");
-									state.connected = false;
-									state.lcu_client = None;
-									state.ws_client = None;
-									app_handle.emit("connection", false).unwrap();
-								}
+							Err(e) => println!("{}", e),
+						}
+					} else {
+						if let Some(client) = &state.lcu_client {
+							if let Err(_) = client.get::<String>("/riotclient/auth-token").await {
+								println!("Lost connection to League client");
+								state.connected = false;
+								state.lcu_client = None;
+								state.ws_client = None;
+								app_handle.emit("connection", false).unwrap();
 							}
 						}
-
-						app_handle.tray_by_id("main").unwrap().set_tooltip(Some(format!("crystal | {}", if state.connected { "connected" } else { "disconnected" }))).unwrap();
-
-						drop(state);
-						tokio::time::sleep(Duration::from_secs(20)).await;
 					}
-				});
+
+					app_handle.tray_by_id("main").unwrap().set_tooltip(Some(format!("crystal | {}", if state.connected { "connected" } else { "disconnected" }))).unwrap();
+
+					drop(state);
+					tokio::time::sleep(Duration::from_secs(20)).await;
+				}
 			});
 
 			Ok(())
 		})
-		//.plugin(tauri_plugin_opener::init())
 		.invoke_handler(tauri::generate_handler![lcu_request, get_connected, http_request])
 		.run(tauri::generate_context!()).expect("error while running tauri application");
 }
