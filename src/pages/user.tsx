@@ -165,7 +165,7 @@ export default function User() {
 		}
 
 		return props_challenges;
-	}, [static_data.lcu_data, hide_masters, hide_legacy, search, sort_by, sort_order]);
+	}, [static_data.lcu_data, hide_masters, hide_legacy, search, sort_by, sort_order, hide_capstone]);
 
 	return (
 		<div className="p-6 space-y-6">
@@ -180,12 +180,7 @@ export default function User() {
 					/>
 				</div>
 
-				<Select
-					onValueChange={(field) => {
-						set_sort_by(field as "name" | "progress");
-					}}
-					value={sort_by}
-				>
+				<Select onValueChange={(field) => { set_sort_by(field as "name" | "progress") }} value={sort_by}>
 					<SelectTrigger className="w-[160px]">
 						<SelectValue placeholder="Sort by" />
 					</SelectTrigger>
