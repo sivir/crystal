@@ -1,35 +1,20 @@
 import React, { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, page_name, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry } from "@/data_context.tsx";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 import { setLoading } from "@/lib/loading_state.ts";
 
-import "./App.css";
+import "./style.css";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import Champions from "@/pages/champions.tsx";
-import Debug from "@/pages/debug.tsx";
-import Lobby from "@/pages/lobby.tsx";
-import Profile from "@/pages/profile.tsx";
-import Skins from "@/pages/skins.tsx";
-import Eternals from "@/pages/eternals.tsx";
-import TeamBuilder from "@/pages/team_builder.tsx";
-import User from "@/pages/user.tsx";
-
-const page_components: Record<page_name, React.ComponentType> = {
-	"home": Champions,
-	"lobby": Lobby,
-	"profile": Profile,
-	"skins": Skins,
-	"eternals": Eternals,
-	"team_builder": TeamBuilder,
-	"settings": Champions,
-	"debug": Debug,
-	"user": User,
-}
+import { pages } from "@/data_context.tsx";
 
 export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<StaticData>>, static_data: StaticData) {
 	console.log("refreshing");
+	if (!static_data.connected) {
+		console.log("not connected, skipping refresh");
+		return;
+	}
 	setLoading(true, 0);
 
 	const promises: Promise<any>[] = [];
@@ -95,26 +80,27 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 export default function App() {
 	const { static_data, setStaticData, has_lcu_data } = useStaticData();
 	const { setSessionData } = useSessionData();
-	const PageComponent = page_components[static_data.page];
+	const PageComponent = pages[static_data.page].component;
 
 	useEffect(() => {
 		refresh_data(setStaticData, static_data);
-	}, [static_data.champion_map]);
+	}, [static_data.champion_map, static_data.connected]);
 
 	useEffect(() => {
 		console.log("init");
+
+		invoke<boolean>("get_connected").then(connected => {
+			console.log("connected", connected);
+			setStaticData(prev => ({ ...prev, connected }));
+		});
 		
 		invoke<APIChampionSummary[]>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-summary.json" }).then(x => {
 			const champion_map = Object.fromEntries(x.filter(c => c.id > 0 && c.id < 3000).map(c => [c.id, c]));
 			setStaticData(prev => ({ ...prev, champion_map }));
 		});
-
-		invoke<boolean>("get_connected").then(x => {
-			setStaticData(prev => ({ ...prev, connected: x }));
-		});
 		
-		invoke<APISkinMetadataMap>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skins.json" }).then(x => {
-			setStaticData(prev => ({ ...prev, skin_map: x }));
+		invoke<APISkinMetadataMap>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skins.json" }).then(skin_map => {
+			setStaticData(prev => ({ ...prev, skin_map }));
 		});
 
 		invoke<APIStatstonesData>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/statstones.json" }).then(x => {
@@ -140,13 +126,9 @@ export default function App() {
 		lcu_get_request<APIChampSelectSession>("/lol-champ-select/v1/session").then(x => {
 			setSessionData(prev => ({ ...prev, champ_select_session: x }));
 		});
-		const unlisten = listen<any>('champ-select', (event) => {
+		const unlisten = listen<{ data: APIChampSelectSession }>('champ-select', (event) => {
 			console.log('Champ select event:', event.payload);
-			if (event.payload && event.payload.data) {
-				setSessionData(prev => ({ ...prev, champ_select_session: event.payload.data as APIChampSelectSession }));
-			} else {
-				setSessionData(prev => ({ ...prev, champ_select_session: null }));
-			}
+			setSessionData(prev => ({ ...prev, champ_select_session: event.payload?.data }));
 		});
 		return () => {
 			unlisten.then(f => f());
@@ -157,13 +139,9 @@ export default function App() {
 		lcu_get_request<APIGameflowSession>("/lol-gameflow/v1/session").then(x => {
 			setSessionData(prev => ({ ...prev, gameflow_session: x }));
 		});
-		const unlisten = listen<any>('gameflow', (event) => {
+		const unlisten = listen<{ data: APIGameflowSession }>('gameflow', (event) => {
 			console.log('Gameflow event:', event.payload);
-			if (event.payload) {
-				setSessionData(prev => ({ ...prev, gameflow_session: event.payload.data as APIGameflowSession }));
-			} else {
-				setSessionData(prev => ({ ...prev, gameflow_session: null }));
-			}
+			setSessionData(prev => ({ ...prev, gameflow_session: event.payload.data }));
 		});
 		return () => {
 			unlisten.then(f => f());

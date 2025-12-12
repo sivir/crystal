@@ -1,60 +1,16 @@
 import { app } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import { useStaticData } from "@/data_context.tsx";
-import { page_name } from "@/data_context.tsx";
+import { pages, useStaticData, useSessionData, page_name } from "@/data_context.tsx";
 import { refresh_data } from "@/App.tsx";
 import { getVersion } from "@tauri-apps/api/app";
 
-import { Home, Moon, Sun, RefreshCcw, Bug, Users, UserPen, Palette, Flame, Globe } from "lucide-react";
+import { Moon, Sun, RefreshCcw } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useTheme } from "@/theme-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
 import { useLoading } from "./lib/loading_state";
-
-export const items: { title: string, url: page_name, icon: any }[] = [
-	{
-		title: "Home",
-		url: "home",
-		icon: Home,
-	},
-	{
-		title: "Lobby",
-		url: "lobby",
-		icon: Users,
-	},
-	{
-		title: "Profile",
-		url: "profile",
-		icon: UserPen,
-	},
-	{
-		title: "Skins",
-		url: "skins",
-		icon: Palette,
-	},
-	{
-		title: "Eternals",
-		url: "eternals",
-		icon: Flame,
-	},
-	{
-		title: "Team Builder",
-		url: "team_builder",
-		icon: Globe,
-	},
-	{
-		title: "Debug",
-		url: "debug",
-		icon: Bug,
-	},
-	{
-		title: "User",
-		url: "user",
-		icon: UserPen,
-	},
-];
 
 function ModeToggle() {
 	const { setTheme, theme } = useTheme()
@@ -93,6 +49,7 @@ async function app_icon(): Promise<string> {
 
 export function AppSidebar() {
 	const { static_data, setStaticData } = useStaticData();
+	const { session_data } = useSessionData();
 	const { is_loading, loading_progress } = useLoading();
 	const [image_src, set_image_src] = useState<string>("");
 	const [version, setVersion] = useState<string>("");
@@ -126,12 +83,15 @@ export function AppSidebar() {
 				<SidebarGroup>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{items.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton asChild onClick={() => setStaticData(prev => ({ ...prev, page: item.url }))}>
+							{Object.entries(pages).map(([key, item]) => (
+								<SidebarMenuItem key={key}>
+									<SidebarMenuButton asChild onClick={() => setStaticData(prev => ({ ...prev, page: key as page_name }))}>
 										<a href={"#"}>
 											<item.icon />
 											<span>{item.title}</span>
+											{key == "lobby" && session_data.gameflow_session?.phase == "ChampSelect" && (
+												<Badge className="bg-green-400">In Lobby</Badge>
+											)}
 										</a>
 									</SidebarMenuButton>
 								</SidebarMenuItem>

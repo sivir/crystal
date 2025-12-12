@@ -153,12 +153,12 @@ export default function Champions() {
 																				}}
 																			/>
 																			<span className="text-muted-foreground">
-																					{name === "diff" ? "Mastery 7" : "Mastery 10"}
-																				</span>
+																				{name === "diff" ? "Mastery 7" : "Mastery 10"}
+																			</span>
 																		</div>
 																		<span className="font-mono font-medium tabular-nums text-foreground">
-																				{displayValue}
-																			</span>
+																			{displayValue}
+																		</span>
 																	</div>;
 																}}
 															/>
