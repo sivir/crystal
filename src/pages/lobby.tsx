@@ -59,6 +59,8 @@ export default function Lobby() {
 		<div className="p-6 space-y-6">
 			<h1 className="text-3xl font-bold">Lobby</h1>
 
+			<>gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}, has riot data: {static_data.riot_data ? "true" : "false"}</>
+
 			{!static_data.connected && (
 				<Card>
 					<CardContent className="pt-6">
