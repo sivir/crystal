@@ -1,6 +1,7 @@
 import { app } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import { pages, useStaticData, useSessionData, page_name } from "@/data_context.tsx";
+import { useStaticData, useSessionData, page_name } from "@/data_context.tsx";
+import { pages } from "@/pages_config"
 import { refresh_data } from "@/App.tsx";
 import { getVersion } from "@tauri-apps/api/app";
 

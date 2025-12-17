@@ -1,6 +1,7 @@
 import { ReactElement } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useStaticData, pages } from "@/data_context.tsx";
+import { useStaticData } from "@/data_context.tsx";
+import { pages } from "@/pages_config"
 
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/sidebar";

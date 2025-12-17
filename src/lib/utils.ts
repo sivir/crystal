@@ -37,15 +37,24 @@ export function challenge_icon(challenge: APILCUChallenge, id: number | null = n
 export type SortDirection = "asc" | "desc";
 
 export async function lcu_get_request<t>(path: string) {
-	return await invoke<t>("lcu_request", { method: "get", path: path });
+	return await invoke<t>("lcu_request", { method: "get", path: path }).catch(() => {
+		console.log("lcu_get_request failed: " + path);
+		return null;
+	});
 }
 
 export async function lcu_post_request<t>(path: string, body: any) {
-	return await invoke<t>("lcu_request", { method: "post", path: path, body: body });
+	return await invoke<t>("lcu_request", { method: "post", path: path, body: body }).catch(() => {
+		console.log("lcu_post_request failed: " + path);
+		return null;
+	});
 }
 
 export async function lcu_put_request<t>(path: string, body: any) {
-	return await invoke<t>("lcu_request", { method: "put", path: path, body: body });
+	return await invoke<t>("lcu_request", { method: "put", path: path, body: body }).catch(() => {
+		console.log("lcu_put_request failed: " + path);
+		return null;
+	});
 }
 
 export function champion_name(id: number, champion_map: APIChampionSummaryMap) {
