@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useStaticData, useSessionData } from "@/data_context";
+import { useStaticData } from "@/data_context";
 import { invoke } from "@tauri-apps/api/core";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { AlertCircle } from "lucide-react";
 
 export default function Debug() {
 	const { static_data } = useStaticData();
-	const { session_data } = useSessionData();
 	const [path, set_path] = useState<string>("");
 	const [request_body, set_request_body] = useState<string>("{}");
 	const [response, set_response] = useState<string>("");
@@ -55,8 +54,6 @@ export default function Debug() {
 				</Alert>
 			)}
 			<div className="flex flex-col gap-2">
-				<>gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}, has riot data: {static_data.riot_data ? "true" : "false"}</>
-
 				<Card>
 					<CardHeader>
 						<CardTitle>LCU API Request</CardTitle>

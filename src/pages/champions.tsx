@@ -37,6 +37,7 @@ export default function Champions() {
 	const [sort_direction, set_sort_direction] = useState<SortDirection>('desc');
 	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
 	const [selected_challenges, set_selected_challenges] = useState(tracked_challenges);
+	const [challenge_filters, set_challenge_filters] = useState<Record<number, 'incomplete' | 'complete' | null>>({});
 
 	useEffect(() => {
 		set_champion_table_data(Object.entries(static_data.champion_map).map(([id, champion]) => {
@@ -84,9 +85,22 @@ export default function Champions() {
 			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.map(x => x.toLowerCase()).includes(role));
 			const nameMatch = search === '' || item.name.toLowerCase().includes(search.toLowerCase());
 
-			return roleMatch && nameMatch;
+			const challengeMatch = selected_challenges.every(challenge_id => {
+				const filter = challenge_filters[challenge_id];
+				if (!filter) return true;
+
+				const index = tracked_challenges.indexOf(challenge_id);
+				if (index === -1) return true; // Should ideally not happen if data is consistent
+
+				const is_completed = item.checks[index];
+				if (filter === 'incomplete') return !is_completed;
+				if (filter === 'complete') return is_completed;
+				return true;
+			});
+
+			return roleMatch && nameMatch && challengeMatch;
 		});
-	}, [sorted_table_data, selected_roles, search]);
+	}, [sorted_table_data, selected_roles, search, challenge_filters, selected_challenges]);
 
 	const catch_em_all = useMemo(() => {
 		if (!has_lcu_data) {
@@ -94,6 +108,17 @@ export default function Champions() {
 		}
 		return static_data.lcu_data[401101].currentValue;
 	}, [filtered_table_data]);
+
+	const toggle_challenge_filter = (id: number) => {
+		set_challenge_filters(prev => {
+			const current = prev[id];
+			let next: 'incomplete' | 'complete' | null = null;
+			if (!current) next = 'incomplete';
+			else if (current === 'incomplete') next = 'complete';
+			else next = null;
+			return { ...prev, [id]: next };
+		});
+	};
 
 	return (
 		<div className="p-6 space-y-6">
@@ -153,12 +178,12 @@ export default function Champions() {
 																				}}
 																			/>
 																			<span className="text-muted-foreground">
-																					{name === "diff" ? "Mastery 7" : "Mastery 10"}
-																				</span>
+																				{name === "diff" ? "Mastery 7" : "Mastery 10"}
+																			</span>
 																		</div>
 																		<span className="font-mono font-medium tabular-nums text-foreground">
-																				{displayValue}
-																			</span>
+																			{displayValue}
+																		</span>
 																	</div>;
 																}}
 															/>
@@ -285,10 +310,20 @@ export default function Champions() {
 							<TableHead></TableHead>
 							<TableHead>Mastery</TableHead>
 							<TableHead>Points until Level</TableHead>
-							{selected_challenges.map(x => <TableHead key={x}>
+							{selected_challenges.map(x => <TableHead key={x} className="w-[40px] min-w-[40px]">
 								<Tooltip>
 									<TooltipTrigger asChild>
-										<img src={challenge_icon(static_data.lcu_data[x])} alt="icon" className="w-6 h-6" />
+										<div 
+											className={`relative cursor-pointer w-fit rounded-full transition-all ${
+												challenge_filters[x] === 'incomplete' ? 'ring-2 ring-red-500' : 
+												challenge_filters[x] === 'complete' ? 'ring-2 ring-green-500' : ''
+											}`}
+											onClick={() => toggle_challenge_filter(x)}
+										>
+											<img src={challenge_icon(static_data.lcu_data[x])} alt="icon" className="w-6 h-6" />
+											{challenge_filters[x] === 'incomplete' && <div className="absolute -bottom-1 -right-1 bg-red-500 rounded-full p-[1px]"><X className="w-3 h-3 text-white" /></div>}
+											{challenge_filters[x] === 'complete' && <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-[1px]"><Check className="w-3 h-3 text-white" /></div>}
+										</div>
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>{static_data.lcu_data[x].description} ({static_data.lcu_data[x].completedIds.length} / {Object.keys(static_data.champion_map).length})</p>
@@ -331,7 +366,7 @@ export default function Champions() {
 								{selected_challenges.map((challenge, j) => {
 									const index = tracked_challenges.indexOf(challenge);
 									return (
-										<TableCell key={j}>{item.checks[index] ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
+										<TableCell key={j} className="w-[40px] min-w-[40px]">{item.checks[index] ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
 									);
 								})}
 							</TableRow>

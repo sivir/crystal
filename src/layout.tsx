@@ -1,9 +1,10 @@
 import { ReactElement } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useStaticData } from "@/data_context.tsx";
+import { pages } from "@/pages_config"
 
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar, items } from "@/sidebar";
+import { AppSidebar } from "@/sidebar";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { X, Square, Minus } from "lucide-react";
@@ -23,7 +24,7 @@ export default function Layout({ children }: { children: ReactElement }) {
 							<Breadcrumb>
 								<BreadcrumbList>
 									<BreadcrumbItem>
-										<BreadcrumbPage>{items.find(item => item.url === static_data.page)?.title}</BreadcrumbPage>
+										<BreadcrumbPage>{pages[static_data.page].title}</BreadcrumbPage>
 									</BreadcrumbItem>
 								</BreadcrumbList>
 							</Breadcrumb>
