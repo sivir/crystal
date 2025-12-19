@@ -28,34 +28,30 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 
 	promises.push(lcu_get_request<APILCUChallengeMap>("/lol-challenges/v1/challenges/local-player").then(lcu_data => {
 		console.log("lcu_data", lcu_data);
-		if (lcu_data === null) {
-			return;
+		if (lcu_data != null) {
+			setStaticData(prev => ({ ...prev, lcu_data }));
 		}
-		setStaticData(prev => ({ ...prev, lcu_data }));
 		update_progress();
 	}));
 
 	if (static_data.mastery_data.length === 0) {
 		total_tasks++;
 		promises.push(lcu_get_request<APIMasteryDataEntry[]>("/lol-champion-mastery/v1/local-player/champion-mastery").then(mastery_data => {
-			if (mastery_data === null) {
-				return;
+			if (mastery_data != null) {
+				setStaticData(prev => ({ ...prev, mastery_data }));
 			}
-			setStaticData(prev => ({ ...prev, mastery_data }));
 			update_progress();
 		}));
 	}
 
 	promises.push(lcu_get_request<APISummonerData>("/lol-summoner/v1/current-summoner").then(async summoner_data => {
-		if (summoner_data === null) {
-			return;
+		if (summoner_data != null) {
+			lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${summoner_data.summonerId}/skins-minimal`).then(skins => {
+				if (skins != null) {
+					setStaticData(prev => ({ ...prev, minimal_skins: skins }));
+				}
+			});
 		}
-		lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${summoner_data.summonerId}/skins-minimal`).then(skins => {
-			if (skins === null) {
-				return;
-			}
-			setStaticData(prev => ({ ...prev, minimal_skins: skins }));
-		});
 		const region_data = await lcu_get_request<APIRegionLocale>("/riotclient/region-locale");
 		const database_data = await supabase_invoke<APIDatabaseData>("get-user", { riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`, region: region_data.region.toLowerCase() });
 		if (database_data.data) {
@@ -66,24 +62,22 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 	}));
 
 	promises.push(lcu_get_request<APILootData>("/lol-loot/v2/player-loot-map").then(loot => {
-		if (loot === null) {
-			return;
+		if (loot != null) {
+			setStaticData(prev => ({ ...prev, loot_data: loot.playerLoot }));
 		}
-		setStaticData(prev => ({ ...prev, loot_data: loot.playerLoot }));
 		update_progress();
 	}));
 
 	Object.keys(static_data.champion_map).forEach(champion_id => {
 		promises.push(lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
-			if (eternals === null) {
-				return;
+			if (eternals != null) {
+				setStaticData(prev => {
+					const new_map = new Map(prev.eternals_map);
+					new_map.set(parseInt(champion_id), eternals);
+					return { ...prev, eternals_map: new_map };
+				});
+				update_progress();
 			}
-			setStaticData(prev => {
-				const new_map = new Map(prev.eternals_map);
-				new_map.set(parseInt(champion_id), eternals);
-				return { ...prev, eternals_map: new_map };
-			});
-			update_progress();
 		}));
 	});
 
@@ -149,9 +143,7 @@ export default function App() {
 	}, []);
 
 	useEffect(() => {
-		lcu_get_request<APIChampSelectSession>("/lol-champ-select/v1/session")
-			.then(x => setSessionData(prev => ({ ...prev, champ_select_session: x })))
-			.catch(() => {}); // 404 when not in champ select
+		lcu_get_request<APIChampSelectSession>("/lol-champ-select/v1/session").then(x => setSessionData(prev => ({ ...prev, champ_select_session: x }))).catch(() => {}); // 404 when not in champ select
 		const unlisten = listen<{ data: APIChampSelectSession }>('champ-select', (event) => {
 			console.log('Champ select event:', event.payload);
 			setSessionData(prev => ({ ...prev, champ_select_session: event.payload?.data }));
