@@ -316,7 +316,6 @@ const SessionDataContext = createContext<{ session_data: SessionData, setSession
 });
 
 export function StaticDataProvider({ children }: { children: React.ReactNode }) {
-	console.log("StaticDataProvider mounting");
 	const [static_data, setStaticData] = useState<StaticData>(initial_page_data);
 	return <StaticDataContext.Provider value={{ static_data, setStaticData }}>{children}</StaticDataContext.Provider>;
 }
