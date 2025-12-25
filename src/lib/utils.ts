@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { invoke } from "@tauri-apps/api/core";
 import { createClient } from "@supabase/supabase-js";
-import { APIChampionSummaryMap, APILCUChallenge } from "@/data_context";
+import { APIChampionSummaryMap, APILCUChallenge, APILCUChallengeMap } from "@/data_context";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -95,4 +95,32 @@ export function mastery_icon_color(level: number): string {
 		return mastery_icon_colors[10];
 	}
 	return mastery_icon_colors[level] || "bg-gray-500";
+}
+
+export const globetrotter_regions: { [key: number]: string } = {
+	303501: "Bandle City",
+	303502: "Bilgewater",
+	303503: "Demacia",
+	303504: "Freljord",
+	303505: "Ionia",
+	303506: "Ixtal",
+	303507: "Noxus",
+	303508: "Piltover",
+	303509: "Shadow Isles",
+	303510: "Shurima",
+	303511: "Targon",
+	303512: "Void",
+	303513: "Zaun",
+};
+
+export const regions = Object.values(globetrotter_regions);
+
+export function get_champion_region(champion_id: number, lcu_data: APILCUChallengeMap): string | null {
+	for (const [challenge_id, region_name] of Object.entries(globetrotter_regions)) {
+		const challenge = lcu_data[parseInt(challenge_id)];
+		if (challenge && challenge.availableIds.includes(champion_id)) {
+			return region_name;
+		}
+	}
+	return null;
 }

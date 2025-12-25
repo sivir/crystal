@@ -1,7 +1,7 @@
 import { APILCUChallenge, useStaticData, default_mastery_data } from "@/data_context";
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { challenge_icon, classes } from "@/lib/utils";
+import { challenge_icon, classes, globetrotter_regions } from "@/lib/utils";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -82,8 +82,9 @@ export default function TeamBuilder() {
 
 	const render_challenge_item = (challenge: APILCUChallenge) => {
 		const is_selected = selected_challenges.includes(challenge.id);
-		const master_threshold = challenge.thresholds?.["MASTER"]?.value || 1;
+		const master_threshold = challenge.thresholds?.["MASTER"]?.value || 0;
 		const progress_text = `${challenge.currentValue}/${master_threshold}`;
+		const display_name = globetrotter_regions[challenge.id] || challenge.name;
 
 		return (
 			<div key={challenge.id} className="flex flex-col space-y-2">
@@ -101,10 +102,10 @@ export default function TeamBuilder() {
 										htmlFor={`challenge-${challenge.id}`}
 										className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
 									>
-										{challenge.name}
+										{display_name}
 									</Label>
 									<div className="flex items-center gap-1">
-										<img src={challenge_icon(static_data.lcu_data[challenge.id])} alt={challenge.name} className="w-4 h-4" />
+										<img src={challenge_icon(static_data.lcu_data[challenge.id])} alt={display_name} className="w-4 h-4" />
 										<span className="text-xs text-muted-foreground">({progress_text})</span>
 									</div>
 								</div>
@@ -163,10 +164,10 @@ export default function TeamBuilder() {
 				</div>
 			</div>
 
-			<div className="w-[40rem] border-l bg-muted/10 p-6 overflow-y-auto flex flex-col gap-4">
+			<div className="w-[35rem] border-l bg-muted/10 p-6 overflow-y-auto flex flex-col gap-4">
 				<h2 className="text-xl font-semibold">Filters</h2>
 
-				<div className="grid grid-cols-2 gap-4">
+				<div className="grid grid-cols-[3fr_2fr] gap-4">
 					<div>
 						<h3 className="font-medium mb-3 text-primary border-b pb-1">Harmony</h3>
 						<div className="space-y-2">
