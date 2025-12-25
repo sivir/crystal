@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { default_mastery_data, useStaticData } from "@/data_context.tsx";
-import { challenge_icon, SortDirection, classes, mastery_color } from "@/lib/utils.ts";
+import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions } from "@/lib/utils.ts";
+import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ type ChampionTableRow = {
 	name: string;
 	id: number;
 	roles: string[];
+	region: string;
 	mastery_level: number;
 	mastery_points: number;
 	points_since_last_level: number;
@@ -38,6 +40,7 @@ export default function Champions() {
 	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
 	const [selected_challenges, set_selected_challenges] = useState(tracked_challenges);
 	const [challenge_filters, set_challenge_filters] = useState<Record<number, 'incomplete' | 'complete' | null>>({});
+	const [selected_regions, set_selected_regions] = useState<string[]>([]);
 
 	useEffect(() => {
 		set_champion_table_data(Object.entries(static_data.champion_map).map(([id, champion]) => {
@@ -46,6 +49,7 @@ export default function Champions() {
 				name: champion.name,
 				id: parseInt(id),
 				roles: champion.roles,
+				region: get_champion_region(parseInt(id), static_data.lcu_data) || "None",
 				mastery_level: current_mastery_data.championLevel,
 				mastery_points: current_mastery_data.championPoints,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
@@ -84,6 +88,7 @@ export default function Champions() {
 		return sorted_table_data.filter(item => {
 			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.map(x => x.toLowerCase()).includes(role));
 			const nameMatch = search === '' || item.name.toLowerCase().includes(search.toLowerCase());
+			const regionMatch = selected_regions.length === 0 || (item.region && selected_regions.includes(item.region));
 
 			const challengeMatch = selected_challenges.every(challenge_id => {
 				const filter = challenge_filters[challenge_id];
@@ -98,9 +103,9 @@ export default function Champions() {
 				return true;
 			});
 
-			return roleMatch && nameMatch && challengeMatch;
+			return roleMatch && nameMatch && regionMatch && challengeMatch;
 		});
-	}, [sorted_table_data, selected_roles, search, challenge_filters, selected_challenges]);
+	}, [sorted_table_data, selected_roles, selected_regions, search, challenge_filters, selected_challenges]);
 
 	const catch_em_all = useMemo(() => {
 		if (!has_lcu_data) {
@@ -259,6 +264,14 @@ export default function Champions() {
 						item_to_label={(item: string) => item}
 					/>
 
+					<FilterDropdown
+						title="Regions"
+						items={regions}
+						selected_items={selected_regions}
+						set_selected_items={set_selected_regions}
+						item_to_label={(item: string) => item}
+					/>
+
 					<div className="flex items-center gap-1">
 						<Select
 							onValueChange={(field) => {
@@ -309,7 +322,7 @@ export default function Champions() {
 							<TableHead>Champion</TableHead>
 							<TableHead></TableHead>
 							<TableHead>Mastery</TableHead>
-							<TableHead>Points until Level</TableHead>
+							<TableHead>Region</TableHead>
 							{selected_challenges.map(x => <TableHead key={x} className="w-[40px] min-w-[40px]">
 								<Tooltip>
 									<TooltipTrigger asChild>
@@ -333,44 +346,32 @@ export default function Champions() {
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{filtered_table_data.map((item, i) => (
-							<TableRow key={i} className={catch_em_all > 0 && item.mastery_points >= catch_em_all ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
-								<TableCell className="flex items-center gap-2"><img src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${item.id}.png`} alt="icon" className="w-6 h-6" /> {item.name}</TableCell>
-								<TableCell>
-									{item.roles.map((role, j) => (
-										<Badge variant="outline" key={j}>{role}</Badge>
-									))}
-								</TableCell>
-								<TableCell><Badge className={mastery_color(item.mastery_level)}>{item.mastery_level}</Badge> {item.mastery_points}</TableCell>
-								<TableCell>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<div>
-												<div className="flex items-center gap-2">
-													<div className="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
-														<div 
-															className={`h-1 rounded-full ${item.points_until_next_level <= 0 ? 'bg-green-500' : 'bg-black'}`}
-															style={{ 
-																width: `${(item.points_since_last_level / (item.points_since_last_level + Math.max(0, item.points_until_next_level))) * 100}%` 
-															}}
-														></div>
-													</div>
-												</div>
-											</div>
-										</TooltipTrigger>
-										<TooltipContent>
-											<p>{item.points_since_last_level}/{item.points_since_last_level + item.points_until_next_level}</p>
-										</TooltipContent>
-									</Tooltip>
-								</TableCell>
-								{selected_challenges.map((challenge, j) => {
-									const index = tracked_challenges.indexOf(challenge);
-									return (
-										<TableCell key={j} className="w-[40px] min-w-[40px]">{item.checks[index] ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
-									);
-								})}
-							</TableRow>
-						))}
+						{filtered_table_data.map((item, i) => {
+							const mastery_data = static_data.mastery_data.find(m => m.championId === item.id) || { ...default_mastery_data, championId: item.id };
+							return (
+								<TableRow key={i} className={catch_em_all > 0 && item.mastery_points >= catch_em_all ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
+									<TableCell className="flex items-center gap-2">
+										<ChampionMasteryIcon data={mastery_data} className="w-8 h-8" />
+										{item.name}
+									</TableCell>
+									<TableCell>
+										{item.roles.map((role, j) => (
+											<Badge variant="outline" key={j}>{role}</Badge>
+										))}
+									</TableCell>
+									<TableCell><Badge className={mastery_color(item.mastery_level)}>{item.mastery_level}</Badge> {item.mastery_points}</TableCell>
+									<TableCell>
+										{item.region}
+									</TableCell>
+									{selected_challenges.map((challenge, j) => {
+										const index = tracked_challenges.indexOf(challenge);
+										return (
+											<TableCell key={j} className="w-[40px] min-w-[40px]">{item.checks[index] ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
+										);
+									})}
+								</TableRow>
+							);
+						})}
 					</TableBody>
 				</Table>
 			</div>
