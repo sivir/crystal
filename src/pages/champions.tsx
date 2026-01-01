@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { default_mastery_data, useStaticData } from "@/data_context.tsx";
 import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions } from "@/lib/utils.ts";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,17 +31,20 @@ type ChampionTableRow = {
 	checks: boolean[];
 }
 
+const default_tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
+
 export default function Champions() {
 	const { static_data, has_lcu_data } = useStaticData();
 	const [champion_table_data, set_champion_table_data] = useState<ChampionTableRow[]>([]);
-	const [selected_roles, set_selected_roles] = useState<string[]>([]);
 	const [search, set_search] = useState<string>('');
-	const [sort_field, set_sort_field] = useState<keyof ChampionTableRow>('mastery_level');
-	const [sort_direction, set_sort_direction] = useState<SortDirection>('desc');
-	const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
-	const [selected_challenges, set_selected_challenges] = useState(tracked_challenges);
-	const [challenge_filters, set_challenge_filters] = useState<Record<number, 'incomplete' | 'complete' | null>>({});
-	const [selected_regions, set_selected_regions] = useState<string[]>([]);
+
+	// Persisted state
+	const [selected_roles, set_selected_roles] = usePersistedState<string[]>('champions.selected_roles', []);
+	const [sort_field, set_sort_field] = usePersistedState<keyof ChampionTableRow>('champions.sort_field', 'mastery_level');
+	const [sort_direction, set_sort_direction] = usePersistedState<SortDirection>('champions.sort_direction', 'desc');
+	const [selected_challenges, set_selected_challenges] = usePersistedState<number[]>('champions.selected_challenges', default_tracked_challenges);
+	const [challenge_filters, set_challenge_filters] = usePersistedState<Record<number, 'incomplete' | 'complete' | null>>('champions.challenge_filters', {});
+	const [selected_regions, set_selected_regions] = usePersistedState<string[]>('champions.selected_regions', []);
 
 	useEffect(() => {
 		set_champion_table_data(Object.entries(static_data.champion_map).map(([id, champion]) => {
@@ -54,7 +58,7 @@ export default function Champions() {
 				mastery_points: current_mastery_data.championPoints,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
 				points_until_next_level: current_mastery_data.championPointsUntilNextLevel,
-				checks: tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds.includes(parseInt(id)))
+				checks: default_tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds.includes(parseInt(id)))
 			};
 		}));
 	}, [static_data.champion_map, static_data.mastery_data, static_data.lcu_data]);
@@ -94,7 +98,7 @@ export default function Champions() {
 				const filter = challenge_filters[challenge_id];
 				if (!filter) return true;
 
-				const index = tracked_challenges.indexOf(challenge_id);
+				const index = default_tracked_challenges.indexOf(challenge_id);
 				if (index === -1) return true; // Should ideally not happen if data is consistent
 
 				const is_completed = item.checks[index];
@@ -307,7 +311,7 @@ export default function Champions() {
 
 					<FilterDropdown
 						title="Challenges"
-						items={tracked_challenges}
+						items={default_tracked_challenges}
 						selected_items={selected_challenges}
 						set_selected_items={set_selected_challenges}
 						item_to_label={(item: number) => static_data.lcu_data[item].name}
@@ -364,7 +368,7 @@ export default function Champions() {
 										{item.region}
 									</TableCell>
 									{selected_challenges.map((challenge, j) => {
-										const index = tracked_challenges.indexOf(challenge);
+										const index = default_tracked_challenges.indexOf(challenge);
 										return (
 											<TableCell key={j} className="w-[40px] min-w-[40px]">{item.checks[index] ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}</TableCell>
 										);
