@@ -1,110 +1,109 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useStaticData, APILCUChallenge } from "@/data_context";
 import { challenge_icon, SortDirection, levels } from "@/lib/utils";
 
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Search } from "lucide-react";
+import { Search, ArrowDown, ArrowUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 
-// TODO: take everything out of challenge, keep only what's needed
 type ChallengeProps = {
 	challenge: APILCUChallenge;
 	progress: number;
 	next_threshold: number;
 }
 
-type Note = {
-	type: "good" | "bug" | "info";
-	text: string;
-}
-
-// incomplete, need to make sure info is right this is just for proof of concept
-const challenge_notes: Record<number, Note[]> = {
-	302201: [
-		{
-			type: "bug",
-			text: "The herald has to survive until both turrets are destroyed, and you cannot ride it!"
-		}
-	],
-	301302: [
-		{
-			type: "info",
-			text: "You actually have to avoid getting kills, dying is fine!"
-		}
-	],
-	203409: [
-		{
-			type: "good",
-			text: "Stealing 2/3 grubs counts!"
-		}
-	]
-}
-
-function TempChallengeCard({ challenge }: { challenge: ChallengeProps }) {
-	const { static_data } = useStaticData();
-	const [expanded, set_expanded] = useState(false);
-
-	function get_id_name(id: number) {
-		if (challenge.challenge.idListType === "CHAMPION_SKIN") {
-			return static_data.skin_map[id]?.name || id;
-		} else if (challenge.challenge.idListType === "CHAMPION") {
-			return static_data.champion_map[id]?.name || id;
-		} else {
-			return id;
-		}
+function get_level_color(level: string): string {
+	switch (level) {
+		case "IRON": return "text-stone-400";
+		case "BRONZE": return "text-amber-700";
+		case "SILVER": return "text-slate-300";
+		case "GOLD": return "text-yellow-400";
+		case "PLATINUM": return "text-teal-300";
+		case "DIAMOND": return "text-blue-400";
+		case "MASTER": return "text-purple-400";
+		case "GRANDMASTER": return "text-red-400";
+		case "CHALLENGER": return "text-amber-300";
+		default: return "text-muted-foreground";
 	}
+}
+
+function get_progress_color(level: string): string {
+	switch (level) {
+		case "IRON": return "bg-stone-400";
+		case "BRONZE": return "bg-amber-700";
+		case "SILVER": return "bg-slate-300";
+		case "GOLD": return "bg-yellow-400";
+		case "PLATINUM": return "bg-teal-300";
+		case "DIAMOND": return "bg-blue-400";
+		case "MASTER": return "bg-purple-400";
+		case "GRANDMASTER": return "bg-red-400";
+		case "CHALLENGER": return "bg-amber-300";
+		default: return "bg-muted";
+	}
+}
+
+function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
+	const { static_data } = useStaticData();
+
+	const parent_challenge = challenge.challenge.parentId ? static_data.lcu_data[challenge.challenge.parentId] : null;
+	const parent_info = parent_challenge ? (() => {
+		const next_level_index = levels.indexOf(parent_challenge.currentLevel) + 1;
+		const next_level = next_level_index < levels.length ? levels[next_level_index] : "CHALLENGER";
+		const next_threshold = parent_challenge.thresholds[next_level]?.value || parent_challenge.thresholds["MASTER"]?.value || parent_challenge.thresholds[parent_challenge.currentLevel]?.value || parent_challenge.currentValue;
+		const progress = Math.min((parent_challenge.currentValue / next_threshold) * 100, 100);
+		return { name: parent_challenge.name, progress, current: parent_challenge.currentValue, target: next_threshold, level: parent_challenge.currentLevel };
+	})() : null;
 
 	return (
-		<Card className="p-4 cursor-pointer" onClick={() => set_expanded(!expanded)}>
-			<div className="flex flex-col gap-4">
-				<div className="flex flex-row gap-4">
-					<img src={challenge_icon(challenge.challenge)} alt={challenge.challenge.name} className="w-12 h-12 rounded-full" />
-					<div className="flex flex-col gap-1">
-						<div className="font-bold">{challenge.challenge.name} ({challenge.challenge.id})</div>
-						<span className="text-sm text-gray-400">{challenge.challenge.description}</span>
+		<Card className="p-3 flex flex-col h-full">
+			{/* Main challenge info */}
+			<div className="flex gap-3 mb-2">
+				<img
+					src={challenge_icon(challenge.challenge)}
+					alt={challenge.challenge.name}
+					className="w-10 h-10 rounded-full shrink-0"
+				/>
+				<div className="flex flex-col min-w-0 flex-1">
+					<div className={`font-semibold text-sm truncate ${get_level_color(challenge.challenge.currentLevel)}`}>
+						{challenge.challenge.name}
 					</div>
-					<div className="ml-auto flex flex-col gap-2">
-						<div className="text-sm text-gray-400">{challenge.challenge.currentLevel}</div>
-						<div className="text-sm text-gray-400">{challenge.challenge.currentValue} / {challenge.next_threshold}</div>
+					<div className="text-xs text-muted-foreground line-clamp-2">
+						{challenge.challenge.description}
 					</div>
 				</div>
-				<Progress className="h-1" value={challenge.progress} />
 			</div>
-			{expanded && challenge.challenge.idListType != "NONE" && (
-				<div className="mt-4 p-2 bg-slate-900 rounded text-sm">
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<h4 className="font-bold mb-1 text-green-400">Completed IDs</h4>
-							<div className="flex flex-wrap gap-1">
-								{challenge.challenge.completedIds.map(id => get_id_name(id)).filter(x => typeof x === "string").sort((a, b) => a.localeCompare(b)).map(id => (
-									<span key={id} className="bg-green-900 text-green-200 px-1 rounded text-xs">{id}</span>
-								))}
-							</div>
-						</div>
-						<div>
-							<h4 className="font-bold mb-1 text-yellow-400">Available IDs</h4>
-							<div className="flex flex-wrap gap-1">
-								{challenge.challenge.availableIds.map(id => get_id_name(id)).filter(x => typeof x === "string").sort((a, b) => a.localeCompare(b)).map(id => (
-									<span key={id} className="bg-yellow-900 text-yellow-200 px-1 rounded text-xs">{id}</span>
-								))}
-							</div>
-						</div>
-					</div>
+
+			{/* Progress section */}
+			<div className="mt-auto space-y-1">
+				<div className="flex justify-between text-xs">
+					<span className={get_level_color(challenge.challenge.currentLevel)}>{challenge.challenge.currentLevel}</span>
+					<span className="text-muted-foreground">{challenge.challenge.currentValue} / {challenge.next_threshold}</span>
 				</div>
-			)}
-			{expanded && challenge_notes[challenge.challenge.id] && (
-				<div className="mt-4 p-2 bg-slate-900 rounded text-sm">
-					<ul className="list-disc list-inside">
-						{challenge_notes[challenge.challenge.id].map((note, i) => (
-							<li key={i} className={`text-${note.type === "bug" ? "red" : note.type === "info" ? "yellow" : "green"}-400`}>{note.text}</li>
-						))}
-					</ul>
+				<Progress
+					value={Math.min(challenge.progress, 100)}
+					className="h-1.5 bg-muted"
+					indicatorClassName={get_progress_color(challenge.challenge.currentLevel)}
+				/>
+			</div>
+
+			{/* Parent category info */}
+			{parent_info && (
+				<div className="mt-3 pt-2 border-t border-border/50 space-y-1">
+					<div className="flex justify-between text-xs">
+						<span className={`truncate ${get_level_color(parent_info.level)}`}>{parent_info.name}</span>
+						<span className="text-muted-foreground shrink-0 ml-2">{parent_info.current} / {parent_info.target}</span>
+					</div>
+					<Progress
+						value={parent_info.progress}
+						className="h-1 bg-muted"
+						indicatorClassName={get_progress_color(parent_info.level)}
+					/>
 				</div>
 			)}
 		</Card>
@@ -113,12 +112,12 @@ function TempChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 
 export default function User() {
 	const { static_data } = useStaticData();
-	const [search, set_search] = useState("");
-	const [sort_by, set_sort_by] = useState<"name" | "progress">("progress");
-	const [sort_order, set_sort_order] = useState<SortDirection>("desc");
-	const [hide_masters, set_hide_masters] = useState(true);
-	const [hide_legacy, set_hide_legacy] = useState(true);
-	const [hide_capstone, set_hide_capstone] = useState(true);
+	const [search, set_search] = usePersistedState("user.search", "");
+	const [sort_by, set_sort_by] = usePersistedState<"name" | "progress">("user.sort_by", "progress");
+	const [sort_order, set_sort_order] = usePersistedState<SortDirection>("user.sort_order", "desc");
+	const [hide_masters, set_hide_masters] = usePersistedState("user.hide_masters", true);
+	const [hide_legacy, set_hide_legacy] = usePersistedState("user.hide_legacy", true);
+	const [hide_capstone, set_hide_capstone] = usePersistedState("user.hide_capstone", true);
 
 	const filtered_challenges: ChallengeProps[] = useMemo(() => {
 		let challenges = Object.values(static_data.lcu_data);
@@ -227,9 +226,9 @@ export default function User() {
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 gap-2">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 				{filtered_challenges.map(challenge => {
-					return (<TempChallengeCard key={challenge.challenge.id} challenge={challenge} />);
+					return (<ChallengeCard key={challenge.challenge.id} challenge={challenge} />);
 				})}
 			</div>
 		</div>

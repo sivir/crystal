@@ -70,6 +70,7 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 
 	Object.keys(static_data.champion_map).forEach(champion_id => {
 		promises.push(lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`).then(eternals => {
+			console.log("eternals", champion_id, eternals);
 			if (eternals != null) {
 				setStaticData(prev => {
 					const new_map = new Map(prev.eternals_map);
