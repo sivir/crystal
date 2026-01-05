@@ -128,6 +128,7 @@ export type APILCUChallenge = {
 	isCapstone: boolean;
 	capstoneGroupName: string;
 	availableIds: number[];
+	parentId: number;
 }
 
 export type APILCUChallengeMap = {

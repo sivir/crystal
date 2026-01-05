@@ -15,6 +15,9 @@ struct LcuEventHandler {
 
 impl Subscriber for LcuEventHandler {
 	fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
+		if self.event_name == "gameflow" {
+			println!("gameflow event: {:?}", event.2.data["map"]["gameModeName"]);
+		}
 		let _ = self.app_handle.emit(self.event_name, event.2.clone());
 	}
 }
@@ -83,6 +86,7 @@ async fn get_connected(state: State<'_, Arc<Mutex<Data>>>) -> Result<bool, Strin
 pub fn run() {
 	tauri::Builder::default()
 		.plugin(tauri_plugin_clipboard_manager::init())
+		.plugin(tauri_plugin_store::Builder::new().build())
 		.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
 			let main_window = app.get_window("main").unwrap();
 			main_window.show().unwrap();
