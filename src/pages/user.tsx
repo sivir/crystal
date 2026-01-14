@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStaticData, APILCUChallenge } from "@/data_context";
 import { challenge_icon, SortDirection, levels } from "@/lib/utils";
 
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Search, ArrowDown, ArrowUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Search, ArrowDown, ArrowUp, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -50,6 +51,9 @@ function get_progress_color(level: string): string {
 
 function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 	const { static_data } = useStaticData();
+	const [dialog_open, set_dialog_open] = useState(false);
+
+	const has_id_list = challenge.challenge.availableIds.length > 0 || challenge.challenge.completedIds.length > 0;
 
 	const parent_challenge = challenge.challenge.parentId ? static_data.lcu_data[challenge.challenge.parentId] : null;
 	const parent_info = parent_challenge ? (() => {
@@ -60,53 +64,114 @@ function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 		return { name: parent_challenge.name, progress, current: parent_challenge.currentValue, target: next_threshold, level: parent_challenge.currentLevel };
 	})() : null;
 
+	function get_id_name(id: number): string {
+		if (challenge.challenge.idListType === "CHAMPION_SKIN") {
+			return static_data.skin_map[id]?.name || String(id);
+		} else if (challenge.challenge.idListType === "CHAMPION") {
+			return static_data.champion_map[id]?.name || String(id);
+		} else {
+			return String(id);
+		}
+	}
+
 	return (
-		<Card className="p-3 flex flex-col h-full">
-			{/* Main challenge info */}
-			<div className="flex gap-3 mb-2">
-				<img
-					src={challenge_icon(challenge.challenge)}
-					alt={challenge.challenge.name}
-					className="w-10 h-10 rounded-full shrink-0"
-				/>
-				<div className="flex flex-col min-w-0 flex-1">
-					<div className={`font-semibold text-sm truncate ${get_level_color(challenge.challenge.currentLevel)}`}>
-						{challenge.challenge.name}
+		<>
+			<Card
+				className={`p-3 flex flex-col h-full ${has_id_list ? 'cursor-pointer hover:bg-accent/50 transition-colors' : ''}`}
+				onClick={() => has_id_list && set_dialog_open(true)}
+			>
+				{/* Main challenge info */}
+				<div className="flex gap-3 mb-2">
+					<img
+						src={challenge_icon(challenge.challenge)}
+						alt={challenge.challenge.name}
+						className="w-10 h-10 rounded-full shrink-0"
+					/>
+					<div className="flex flex-col min-w-0 flex-1">
+						<div className={`font-semibold text-sm truncate ${get_level_color(challenge.challenge.currentLevel)}`}>
+							{challenge.challenge.name}
+						</div>
+						<div className="text-xs text-muted-foreground line-clamp-2">
+							{challenge.challenge.description}
+						</div>
 					</div>
-					<div className="text-xs text-muted-foreground line-clamp-2">
-						{challenge.challenge.description}
-					</div>
+					{has_id_list && (
+						<List className="w-4 h-4 text-muted-foreground shrink-0" />
+					)}
 				</div>
-			</div>
 
-			{/* Progress section */}
-			<div className="mt-auto space-y-1">
-				<div className="flex justify-between text-xs">
-					<span className={get_level_color(challenge.challenge.currentLevel)}>{challenge.challenge.currentLevel}</span>
-					<span className="text-muted-foreground">{challenge.challenge.currentValue} / {challenge.next_threshold}</span>
-				</div>
-				<Progress
-					value={Math.min(challenge.progress, 100)}
-					className="h-1.5 bg-muted"
-					indicatorClassName={get_progress_color(challenge.challenge.currentLevel)}
-				/>
-			</div>
-
-			{/* Parent category info */}
-			{parent_info && (
-				<div className="mt-3 pt-2 border-t border-border/50 space-y-1">
+				{/* Progress section */}
+				<div className="mt-auto space-y-1">
 					<div className="flex justify-between text-xs">
-						<span className={`truncate ${get_level_color(parent_info.level)}`}>{parent_info.name}</span>
-						<span className="text-muted-foreground shrink-0 ml-2">{parent_info.current} / {parent_info.target}</span>
+						<span className={get_level_color(challenge.challenge.currentLevel)}>{challenge.challenge.currentLevel}</span>
+						<span className="text-muted-foreground">{challenge.challenge.currentValue} / {challenge.next_threshold}</span>
 					</div>
 					<Progress
-						value={parent_info.progress}
-						className="h-1 bg-muted"
-						indicatorClassName={get_progress_color(parent_info.level)}
+						value={Math.min(challenge.progress, 100)}
+						className="h-1.5 bg-muted"
+						indicatorClassName={get_progress_color(challenge.challenge.currentLevel)}
 					/>
 				</div>
-			)}
-		</Card>
+
+				{/* Parent category info */}
+				{parent_info && (
+					<div className="mt-3 pt-2 border-t border-border/50 space-y-1">
+						<div className="flex justify-between text-xs">
+							<span className={`truncate ${get_level_color(parent_info.level)}`}>{parent_info.name}</span>
+							<span className="text-muted-foreground shrink-0 ml-2">{parent_info.current} / {parent_info.target}</span>
+						</div>
+						<Progress
+							value={parent_info.progress}
+							className="h-1 bg-muted"
+							indicatorClassName={get_progress_color(parent_info.level)}
+						/>
+					</div>
+				)}
+			</Card>
+
+			<Dialog open={dialog_open} onOpenChange={set_dialog_open}>
+				<DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+					<DialogHeader>
+						<DialogTitle className={get_level_color(challenge.challenge.currentLevel)}>
+							{challenge.challenge.name}
+						</DialogTitle>
+						<DialogDescription>{challenge.challenge.description}</DialogDescription>
+					</DialogHeader>
+					<div className="grid grid-cols-2 gap-4 overflow-y-auto flex-1">
+						<div>
+							<h4 className="font-semibold mb-2 text-green-400 text-sm">
+								Completed ({challenge.challenge.completedIds.length})
+							</h4>
+							<div className="flex flex-wrap gap-1 max-h-[300px] overflow-y-auto">
+								{challenge.challenge.completedIds
+									.map(id => ({ id, name: get_id_name(id) }))
+									.sort((a, b) => a.name.localeCompare(b.name))
+									.map(({ id, name }) => (
+										<span key={id} className="bg-green-900/50 text-green-200 px-2 py-0.5 rounded text-xs">
+											{name}
+										</span>
+									))}
+							</div>
+						</div>
+						<div>
+							<h4 className="font-semibold mb-2 text-yellow-400 text-sm">
+								Available ({challenge.challenge.availableIds.length})
+							</h4>
+							<div className="flex flex-wrap gap-1 max-h-[300px] overflow-y-auto">
+								{challenge.challenge.availableIds
+									.map(id => ({ id, name: get_id_name(id) }))
+									.sort((a, b) => a.name.localeCompare(b.name))
+									.map(({ id, name }) => (
+										<span key={id} className="bg-yellow-900/50 text-yellow-200 px-2 py-0.5 rounded text-xs">
+											{name}
+										</span>
+									))}
+							</div>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
 

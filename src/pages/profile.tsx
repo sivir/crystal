@@ -51,7 +51,7 @@ export default function Profile() {
 					<CardContent className="space-y-4">
 						<div>
 							<div className="text-sm font-medium mb-2">
-								{active_slot !== null ? `Select an icon for Slot ${active_slot + 1}` : "Click a slot to select an icon"}
+								{active_slot !== null ? `Select an icon for slot ${active_slot + 1}` : "Click a slot to select an icon"}
 							</div>
 							<div className="flex gap-3">
 								{profile_icons.map((id, slot_index) => (
@@ -132,11 +132,12 @@ export default function Profile() {
 						<Textarea
 							value={text_content}
 							onChange={(e) => set_text_content(e.target.value)}
-							placeholder="Enter your text here..."
+							placeholder="Enter your status..."
 							rows={10}
 							className="w-full"
 						/>
 						<APIButton onClick={() => lcu_put_request("/lol-chat/v1/me", { statusMessage: text_content })}>Update Status</APIButton>
+						<div className="whitespace-pre-wrap">{text_content}</div>
 					</CardContent>
 				</Card>
 			</div>
