@@ -15,9 +15,43 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/filter_dropdown.tsx";
+import { Progress } from "@/components/ui/progress";
+import { levels } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
 const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
+
+function get_level_color(level: string): string {
+	switch (level) {
+		case "IRON": return "text-stone-400";
+		case "BRONZE": return "text-amber-700";
+		case "SILVER": return "text-slate-300";
+		case "GOLD": return "text-yellow-400";
+		case "PLATINUM": return "text-teal-300";
+		case "DIAMOND": return "text-blue-400";
+		case "MASTER": return "text-purple-400";
+		case "GRANDMASTER": return "text-red-400";
+		case "CHALLENGER": return "text-amber-300";
+		default: return "text-muted-foreground";
+	}
+}
+
+function get_progress_color(level: string): string {
+	switch (level) {
+		case "IRON": return "bg-stone-400";
+		case "BRONZE": return "bg-amber-700";
+		case "SILVER": return "bg-slate-300";
+		case "GOLD": return "bg-yellow-400";
+		case "PLATINUM": return "bg-teal-300";
+		case "DIAMOND": return "bg-blue-400";
+		case "MASTER": return "bg-purple-400";
+		case "GRANDMASTER": return "bg-red-400";
+		case "CHALLENGER": return "bg-amber-300";
+		default: return "bg-muted";
+	}
+}
 
 type ChampionTableRow = {
 	name: string;
@@ -45,6 +79,7 @@ export default function Champions() {
 	const [selected_challenges, set_selected_challenges] = usePersistedState<number[]>('champions.selected_challenges', default_tracked_challenges);
 	const [challenge_filters, set_challenge_filters] = usePersistedState<Record<number, 'incomplete' | 'complete' | null>>('champions.challenge_filters', {});
 	const [selected_regions, set_selected_regions] = usePersistedState<string[]>('champions.selected_regions', []);
+	const [mastery_dialog_open, set_mastery_dialog_open] = useState(false);
 
 	useEffect(() => {
 		set_champion_table_data(Object.entries(static_data.champion_map).map(([id, champion]) => {
@@ -118,6 +153,106 @@ export default function Champions() {
 		return static_data.lcu_data[401101].currentValue;
 	}, [filtered_table_data]);
 
+	type MasteryChallengeInfo = {
+		id: number;
+		name: string;
+		class_name: string;
+		is_m10: boolean;
+		current: number;
+		next_threshold: number;
+		champions_needed: number;
+		total_points_needed: number;
+		champions: { id: number; name: string; points_needed: number; current_level: number }[];
+		level: string;
+		has_enough_champions: boolean;
+		available_champions_count: number;
+	};
+
+	// Calculate all mastery challenges with their completion requirements
+	const all_mastery_challenges = useMemo(() => {
+		if (!has_lcu_data || champion_table_data.length === 0) return [];
+
+		const all_challenges = [...m7_challenges, ...m10_challenges];
+		const results: MasteryChallengeInfo[] = [];
+
+		for (let i = 0; i < all_challenges.length; i++) {
+			const challenge_id = all_challenges[i];
+			const challenge = static_data.lcu_data[challenge_id];
+			if (!challenge) continue;
+
+			const is_m10 = i >= 6;
+			const class_index = is_m10 ? i - 6 : i;
+			const class_name = classes[class_index];
+			const target_level = is_m10 ? 10 : 7;
+
+			// Get next threshold
+			const thresholds = Object.entries(challenge.thresholds)
+				.sort(([, a], [, b]) => a.value - b.value)
+				.map(([, v]) => v.value);
+			const current = challenge.currentValue;
+			const next_threshold = thresholds.find(t => t > current) || thresholds[thresholds.length - 1];
+
+			// Skip if already at max
+			if (current >= next_threshold) continue;
+
+			const champions_needed = next_threshold - current;
+
+			// Use availableIds from the challenge to get eligible champions
+			const available_ids = challenge.availableIds || [];
+			const eligible_champions = champion_table_data
+				.filter(c => available_ids.includes(c.id) && c.mastery_level < target_level)
+				.map(c => {
+					// Calculate points needed to reach target level
+					let points_needed = 0;
+					if (c.mastery_level < target_level) {
+						// Points to finish current level
+						points_needed = c.points_until_next_level;
+						// Add estimated points for remaining levels (rough estimate: ~21600 per level after 5)
+						for (let lvl = c.mastery_level + 1; lvl < target_level; lvl++) {
+							points_needed += 21600;
+						}
+					}
+					return {
+						id: c.id,
+						name: c.name,
+						points_needed,
+						current_level: c.mastery_level
+					};
+				})
+				.sort((a, b) => a.points_needed - b.points_needed);
+
+			const has_enough_champions = eligible_champions.length >= champions_needed;
+			const selected_champions = eligible_champions.slice(0, champions_needed);
+			const total_points_needed = has_enough_champions
+				? selected_champions.reduce((sum, c) => sum + c.points_needed, 0)
+				: Infinity;
+
+			results.push({
+				id: challenge_id,
+				name: challenge.name,
+				class_name,
+				is_m10,
+				current,
+				next_threshold,
+				champions_needed,
+				total_points_needed,
+				champions: selected_champions,
+				level: challenge.currentLevel,
+				has_enough_champions,
+				available_champions_count: eligible_champions.length
+			});
+		}
+
+		// Sort by total points needed (challenges with enough champions first, then by points)
+		return results.sort((a, b) => {
+			if (a.has_enough_champions && !b.has_enough_champions) return -1;
+			if (!a.has_enough_champions && b.has_enough_champions) return 1;
+			return a.total_points_needed - b.total_points_needed;
+		});
+	}, [has_lcu_data, champion_table_data, static_data.lcu_data]);
+
+	const closest_mastery_challenge = all_mastery_challenges.length > 0 ? all_mastery_challenges[0] : null;
+
 	const toggle_challenge_filter = (id: number) => {
 		set_challenge_filters(prev => {
 			const current = prev[id];
@@ -130,13 +265,14 @@ export default function Champions() {
 	};
 
 	return (
+		<>
 		<div className="p-6 space-y-6">
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+					<CardHeader>
 						<CardTitle className="text-sm font-medium">Mastery Class Challenges</CardTitle>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="pb-0">
 						<ChartContainer config={{
 							diff: { label: "Mastery 7", color: "#2563eb" },
 							m10: { label: "Mastery 10", color: "#60a5fa" }
@@ -173,12 +309,15 @@ export default function Champions() {
 											<ResponsiveContainer width="100%" height={250}>
 												<BarChart data={chart_data}>
 													<ChartTooltip
-														wrapperStyle={{ zIndex: 100 }}
+														wrapperStyle={{ zIndex: 100, minWidth: '150px' }}
 														content={
 															<ChartTooltipContent
-																formatter={(value, name, _item) => {
-																	const displayValue = name === "diff" ? m7_current : value;
-																	return <div className="flex items-center justify-between gap-2">
+																formatter={(_value, name, _item) => {
+																	const current_value = name === "diff" ? m7_current : m10_current;
+																	const next_threshold = name === "diff"
+																		? (m7_thresholds.find(t => t > m7_current) || m7_max)
+																		: (m10_thresholds.find(t => t > m10_current) || m7_max);
+																	return <div className="flex items-center justify-between gap-4 whitespace-nowrap">
 																		<div className="flex items-center gap-2">
 																			<div
 																				className="h-2.5 w-1 shrink-0 rounded-[2px]"
@@ -191,7 +330,7 @@ export default function Champions() {
 																			</span>
 																		</div>
 																		<span className="font-mono font-medium tabular-nums text-foreground">
-																			{displayValue}
+																			{current_value} / {next_threshold}
 																		</span>
 																	</div>;
 																}}
@@ -238,13 +377,104 @@ export default function Champions() {
 					</CardContent>
 				</Card>
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Summary Statistics</CardTitle>
+					<CardHeader>
+						<CardTitle className="text-sm font-medium">Other Mastery Challenges</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-4">
-							temporary
+						<div className="grid grid-cols-2 gap-3">
+							{[401101, 401102, 401103, 401104].map(challengeId => {
+								if (!has_lcu_data) return null;
+								const challenge = static_data.lcu_data[challengeId];
+								if (!challenge) return null;
+
+								const next_level_index = levels.indexOf(challenge.currentLevel) + 1;
+								const next_level = next_level_index < levels.length ? levels[next_level_index] : "CHALLENGER";
+								const next_threshold = challenge.thresholds[next_level]?.value || challenge.thresholds["MASTER"]?.value || challenge.thresholds[challenge.currentLevel]?.value || challenge.currentValue;
+								const progress = Math.min((challenge.currentValue / next_threshold) * 100, 100);
+
+								return (
+									<Tooltip key={challengeId}>
+										<TooltipTrigger asChild>
+											<div className="space-y-1 cursor-help">
+												<div className="flex items-center gap-2">
+													<img
+														src={challenge_icon(challenge)}
+														alt={challenge.name}
+														className="w-8 h-8 rounded-full shrink-0"
+													/>
+													<div className="flex-1 min-w-0">
+														<div className="flex justify-between text-sm">
+															<span className={`truncate ${get_level_color(challenge.currentLevel)}`}>{challenge.name}</span>
+														</div>
+														<div className="flex justify-between text-xs text-muted-foreground">
+															<span>{challenge.currentValue.toLocaleString()} / {next_threshold.toLocaleString()}</span>
+														</div>
+													</div>
+												</div>
+												<Progress
+													value={progress}
+													className="h-1.5 bg-muted"
+													indicatorClassName={get_progress_color(challenge.currentLevel)}
+												/>
+											</div>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>{challenge.description}</p>
+										</TooltipContent>
+									</Tooltip>
+								);
+							})}
 						</div>
+
+						{closest_mastery_challenge && (
+							<>
+								<Separator className="my-4" />
+								<div
+									className="space-y-2 cursor-pointer hover:bg-accent/50 rounded-md p-2 -mx-2 transition-colors"
+									onClick={() => set_mastery_dialog_open(true)}
+								>
+									<div className="flex items-center gap-2">
+										<img
+											src={challenge_icon(static_data.lcu_data[closest_mastery_challenge.id])}
+											alt={closest_mastery_challenge.name}
+											className="w-8 h-8 rounded-full shrink-0"
+										/>
+										<div className="flex-1">
+											<div className="flex justify-between items-center">
+												<span className={`text-sm font-medium ${get_level_color(closest_mastery_challenge.level)}`}>
+													Closest: {closest_mastery_challenge.name}
+													<span className="ml-1 text-xs text-muted-foreground">
+														({closest_mastery_challenge.is_m10 ? 'M10' : 'M7'})
+													</span>
+												</span>
+												<span className="text-xs text-muted-foreground">
+													{closest_mastery_challenge.current} / {closest_mastery_challenge.next_threshold}
+												</span>
+											</div>
+											<div className="text-xs text-muted-foreground">
+												{closest_mastery_challenge.has_enough_champions
+													? `${closest_mastery_challenge.total_points_needed.toLocaleString()} points needed`
+													: `Need ${closest_mastery_challenge.champions_needed - closest_mastery_challenge.available_champions_count} more champions`
+												}
+											</div>
+										</div>
+									</div>
+									{closest_mastery_challenge.has_enough_champions && (
+										<div className="flex flex-wrap gap-1">
+											{closest_mastery_challenge.champions.map(champ => (
+												<Badge
+													key={champ.id}
+													variant="outline"
+													className={`text-xs ${mastery_color(champ.current_level)}`}
+												>
+													{champ.name} M{champ.current_level} ({champ.points_needed.toLocaleString()})
+												</Badge>
+											))}
+										</div>
+									)}
+								</div>
+							</>
+						)}
 					</CardContent>
 				</Card>
 			</div>
@@ -363,7 +593,18 @@ export default function Champions() {
 											<Badge variant="outline" key={j}>{role}</Badge>
 										))}
 									</TableCell>
-									<TableCell><Badge className={mastery_color(item.mastery_level)}>{item.mastery_level}</Badge> {item.mastery_points}</TableCell>
+									<TableCell>
+									<div className="flex items-center gap-2">
+										<Badge className={mastery_color(item.mastery_level)}>{item.mastery_level}</Badge>
+										<div className="flex flex-col">
+											<span className="text-sm leading-tight">{item.mastery_points.toLocaleString()}</span>
+											<Progress
+												value={item.points_until_next_level === 0 ? 100 : (item.points_since_last_level / (item.points_since_last_level + item.points_until_next_level)) * 100}
+												className="h-1 w-16 bg-muted"
+											/>
+										</div>
+									</div>
+								</TableCell>
 									<TableCell>
 										{item.region}
 									</TableCell>
@@ -380,5 +621,69 @@ export default function Champions() {
 				</Table>
 			</div>
 		</div>
+
+		<Dialog open={mastery_dialog_open} onOpenChange={set_mastery_dialog_open}>
+			<DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+				<DialogHeader>
+					<DialogTitle>All Mastery Class Challenges</DialogTitle>
+					<DialogDescription>
+						Challenges sorted by total mastery points needed to reach the next threshold
+					</DialogDescription>
+				</DialogHeader>
+				<div className="overflow-y-auto flex-1 space-y-4">
+					{all_mastery_challenges.map((challenge, index) => (
+						<div
+							key={challenge.id}
+							className={`p-3 rounded-lg border ${index === 0 ? 'border-primary bg-primary/5' : 'border-border'}`}
+						>
+							<div className="flex items-center gap-3 mb-2">
+								<img
+									src={challenge_icon(static_data.lcu_data[challenge.id])}
+									alt={challenge.name}
+									className="w-10 h-10 rounded-full shrink-0"
+								/>
+								<div className="flex-1">
+									<div className="flex justify-between items-center">
+										<span className={`font-medium ${get_level_color(challenge.level)}`}>
+											{challenge.name}
+											<span className="ml-1 text-xs text-muted-foreground font-normal">
+												({challenge.is_m10 ? 'M10' : 'M7'})
+											</span>
+										</span>
+										<span className="text-sm text-muted-foreground">
+											{challenge.current} / {challenge.next_threshold}
+											{index === 0 && (
+												<Badge variant="default" className="shrink-0 ml-2">Closest</Badge>
+											)}
+										</span>
+									</div>
+									<div className="text-xs text-muted-foreground">
+										{challenge.has_enough_champions
+											? `${challenge.total_points_needed.toLocaleString()} points needed • ${challenge.champions_needed} champion${challenge.champions_needed > 1 ? 's' : ''}`
+											: `Not enough champions (have ${challenge.available_champions_count}, need ${challenge.champions_needed})`
+										}
+									</div>
+								</div>
+
+							</div>
+							{challenge.has_enough_champions && challenge.champions.length > 0 && (
+								<div className="flex flex-wrap gap-1 mt-2">
+									{challenge.champions.map(champ => (
+										<Badge
+											key={champ.id}
+											variant="outline"
+											className={`text-xs ${mastery_color(champ.current_level)}`}
+										>
+											{champ.name} M{champ.current_level} ({champ.points_needed.toLocaleString()})
+										</Badge>
+									))}
+								</div>
+							)}
+						</div>
+					))}
+				</div>
+			</DialogContent>
+		</Dialog>
+		</>
 	);
 }
