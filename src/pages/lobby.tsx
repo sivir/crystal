@@ -15,6 +15,7 @@ const ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID = 101301; // aram (s- or better on a
 const ARENA_QUEUE_ID = 1700;
 const ARAM_QUEUE_ID = 450;
 const ARAM_MAYHEM_QUEUE_ID = 2400;
+const ARURF_QUEUE_ID = 900;
 
 type TableChampion = {
 	champion_id: number;
@@ -33,7 +34,7 @@ export default function Lobby() {
 	}, [session_data.gameflow_session]);
 
 	const in_champ_select = session_data.gameflow_session?.phase == "ChampSelect";
-	const supported_mode = game_mode == ARENA_QUEUE_ID || game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID;
+	const supported_mode = game_mode == ARENA_QUEUE_ID || game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID;
 
 	useEffect(() => {
 		if (!in_champ_select || !supported_mode) {
@@ -75,11 +76,9 @@ export default function Lobby() {
 				const mastery_a = static_data.mastery_data.find(m => m.championId === a.champion_id) ?? default_mastery_data;
 				const mastery_b = static_data.mastery_data.find(m => m.championId === b.champion_id) ?? default_mastery_data;
 
-				// Sort by mastery level first (descending)
 				if (mastery_a.championLevel !== mastery_b.championLevel) {
 					return mastery_b.championLevel - mastery_a.championLevel;
 				}
-				// Then by mastery points (descending)
 				return mastery_b.championPoints - mastery_a.championPoints;
 			});
 	}, [table_champions, static_data.mastery_data, hide_mastery_level]);
@@ -111,7 +110,7 @@ export default function Lobby() {
 					<CardHeader className="flex flex-row items-center justify-between space-y-0">
 						<CardTitle>{game_mode == ARENA_QUEUE_ID ? "Arena" : "ARAM"} Champion Progress</CardTitle>
 						<div className="flex items-center gap-2">
-							<span className="text-sm text-muted-foreground">Hide M</span>
+							<span className="text-sm text-muted-foreground">Hide Mastery:</span>
 							<Select
 								value={hide_mastery_level.toString()}
 								onValueChange={(value) => set_hide_mastery_level(parseInt(value))}
