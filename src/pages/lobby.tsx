@@ -52,7 +52,7 @@ export default function Lobby() {
 				set_is_loading(false);
 			});
 		}
-		if (game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID) {
+		if (game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID) {
 			const champions = session_data.champ_select_session?.myTeam.map((player: APIChampSelectPlayer) => ({
 				champion_id: player.championId,
 				is_completed: static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID].completedIds.includes(player.championId)
@@ -100,7 +100,7 @@ export default function Lobby() {
 			{static_data.connected && !in_champ_select && (
 				<Card>
 					<CardContent className="pt-6">
-						<p className="text-muted-foreground">Not in champion select for Arena or ARAM</p>
+						<p className="text-muted-foreground">Not in champion select for Arena/ARAM/ARURF</p>
 					</CardContent>
 				</Card>
 			)}
@@ -108,7 +108,7 @@ export default function Lobby() {
 			{static_data.connected && in_champ_select && supported_mode && (
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle>{game_mode == ARENA_QUEUE_ID ? "Arena" : "ARAM"} Champion Progress</CardTitle>
+						<CardTitle>Champion Progress</CardTitle>
 						<div className="flex items-center gap-2">
 							<span className="text-sm text-muted-foreground">Hide Mastery:</span>
 							<Select
@@ -143,7 +143,7 @@ export default function Lobby() {
 										<TableHeader>
 											<TableRow>
 												<TableHead>Champion</TableHead>
-												{game_mode != ARAM_MAYHEM_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
+												{game_mode != ARURF_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
 											</TableRow>
 										</TableHeader>
 										<TableBody>
@@ -155,7 +155,7 @@ export default function Lobby() {
 															{champion_name(champion_id, static_data.champion_map)}
 														</div>
 													</TableCell>
-													{game_mode != ARAM_MAYHEM_QUEUE_ID &&  <TableCell className="text-center">
+													{game_mode != ARURF_QUEUE_ID &&  <TableCell className="text-center">
 														{is_completed ? (
 															<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
 														) : (
