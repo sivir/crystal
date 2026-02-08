@@ -377,12 +377,9 @@ export default function Champions() {
 					</CardContent>
 				</Card>
 				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm font-medium">Other Mastery Challenges</CardTitle>
-					</CardHeader>
-					<CardContent>
+					<CardContent className="pt-6">
 						<div className="grid grid-cols-2 gap-3">
-							{[401101, 401102, 401103, 401104].map(challengeId => {
+							{[401101, 401104, 401102, 401105, 401103, 401107].map(challengeId => {
 								if (!has_lcu_data) return null;
 								const challenge = static_data.lcu_data[challengeId];
 								if (!challenge) return null;
