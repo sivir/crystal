@@ -7,7 +7,7 @@ import Eternals from "@/pages/eternals";
 import TeamBuilder from "@/pages/team_builder";
 import Debug from "@/pages/debug";
 import UserPage from "@/pages/user";
-import { Skeleton } from "@/components/ui/skeleton";
+import SettingsPage from "@/pages/settings";
 
 export const pages: Record<string, { title: string, icon: React.ComponentType, component: React.ComponentType }> = {
 	"home": {
@@ -43,7 +43,7 @@ export const pages: Record<string, { title: string, icon: React.ComponentType, c
 	"settings": {
 		title: "Settings",
 		icon: Settings,
-		component: Skeleton,
+		component: SettingsPage,
 	},
 	"debug": {
 		title: "Debug",
