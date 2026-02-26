@@ -44,34 +44,3 @@ flowchart LR
 
 ![alt text](image.png) ![alt text](image-1.png) ![alt text](image-2.png)
 ![alt text](image-3.png)
-
-## Changelog
-
-0.6.0
-
-- added team builder
-
-0.5.0
-
-- added eternals tracker
-
-0.4.0
-
-- added skin tracker
-- added authentication to supabase functions
-- minor ui tweaks
-
-0.3.0
-
-- added custom status
-- added challenge icon editor
-- added tooltips to homepage challenge icons
-
-0.2.0
-
-- added functionality to automatically track available champions in aram and
-  crowd favorites for arena and display relevant challenge progress
-
-0.1.0
-
-- initial release
