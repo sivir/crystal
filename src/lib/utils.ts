@@ -124,3 +124,33 @@ export function get_champion_region(champion_id: number, lcu_data: APILCUChallen
 	}
 	return null;
 }
+
+export function get_level_color(level: string): string {
+	switch (level) {
+		case "IRON": return "text-stone-400";
+		case "BRONZE": return "text-amber-700";
+		case "SILVER": return "text-slate-300";
+		case "GOLD": return "text-yellow-400";
+		case "PLATINUM": return "text-teal-300";
+		case "DIAMOND": return "text-blue-400";
+		case "MASTER": return "text-purple-400";
+		case "GRANDMASTER": return "text-red-400";
+		case "CHALLENGER": return "text-amber-300";
+		default: return "text-muted-foreground";
+	}
+}
+
+export function get_progress_color(level: string): string {
+	switch (level) {
+		case "IRON": return "bg-stone-400";
+		case "BRONZE": return "bg-amber-700";
+		case "SILVER": return "bg-slate-300";
+		case "GOLD": return "bg-yellow-400";
+		case "PLATINUM": return "bg-teal-300";
+		case "DIAMOND": return "bg-blue-400";
+		case "MASTER": return "bg-purple-400";
+		case "GRANDMASTER": return "bg-red-400";
+		case "CHALLENGER": return "bg-amber-300";
+		default: return "bg-muted";
+	}
+}

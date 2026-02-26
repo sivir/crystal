@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useStaticData, APILCUChallenge } from "@/data_context";
-import { challenge_icon, SortDirection, levels } from "@/lib/utils";
+import { challenge_icon, SortDirection, levels, get_level_color, get_progress_color } from "@/lib/utils";
 
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,36 +17,6 @@ type ChallengeProps = {
 	challenge: APILCUChallenge;
 	progress: number;
 	next_threshold: number;
-}
-
-function get_level_color(level: string): string {
-	switch (level) {
-		case "IRON": return "text-stone-400";
-		case "BRONZE": return "text-amber-700";
-		case "SILVER": return "text-slate-300";
-		case "GOLD": return "text-yellow-400";
-		case "PLATINUM": return "text-teal-300";
-		case "DIAMOND": return "text-blue-400";
-		case "MASTER": return "text-purple-400";
-		case "GRANDMASTER": return "text-red-400";
-		case "CHALLENGER": return "text-amber-300";
-		default: return "text-muted-foreground";
-	}
-}
-
-function get_progress_color(level: string): string {
-	switch (level) {
-		case "IRON": return "bg-stone-400";
-		case "BRONZE": return "bg-amber-700";
-		case "SILVER": return "bg-slate-300";
-		case "GOLD": return "bg-yellow-400";
-		case "PLATINUM": return "bg-teal-300";
-		case "DIAMOND": return "bg-blue-400";
-		case "MASTER": return "bg-purple-400";
-		case "GRANDMASTER": return "bg-red-400";
-		case "CHALLENGER": return "bg-amber-300";
-		default: return "bg-muted";
-	}
 }
 
 function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {

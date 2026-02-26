@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { default_mastery_data, useStaticData } from "@/data_context.tsx";
-import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions } from "@/lib/utils.ts";
+import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions, get_level_color, get_progress_color } from "@/lib/utils.ts";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 
@@ -23,35 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
 const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
 
-function get_level_color(level: string): string {
-	switch (level) {
-		case "IRON": return "text-stone-400";
-		case "BRONZE": return "text-amber-700";
-		case "SILVER": return "text-slate-300";
-		case "GOLD": return "text-yellow-400";
-		case "PLATINUM": return "text-teal-300";
-		case "DIAMOND": return "text-blue-400";
-		case "MASTER": return "text-purple-400";
-		case "GRANDMASTER": return "text-red-400";
-		case "CHALLENGER": return "text-amber-300";
-		default: return "text-muted-foreground";
-	}
-}
-
-function get_progress_color(level: string): string {
-	switch (level) {
-		case "IRON": return "bg-stone-400";
-		case "BRONZE": return "bg-amber-700";
-		case "SILVER": return "bg-slate-300";
-		case "GOLD": return "bg-yellow-400";
-		case "PLATINUM": return "bg-teal-300";
-		case "DIAMOND": return "bg-blue-400";
-		case "MASTER": return "bg-purple-400";
-		case "GRANDMASTER": return "bg-red-400";
-		case "CHALLENGER": return "bg-amber-300";
-		default: return "bg-muted";
-	}
-}
+const mastery_per_level = [0, 0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000];
 
 type ChampionTableRow = {
 	name: string;
@@ -209,7 +181,7 @@ export default function Champions() {
 						points_needed = c.points_until_next_level;
 						// Add estimated points for remaining levels (rough estimate: ~21600 per level after 5)
 						for (let lvl = c.mastery_level + 1; lvl < target_level; lvl++) {
-							points_needed += 21600;
+							points_needed += mastery_per_level[lvl] || 11000;
 						}
 					}
 					return {
