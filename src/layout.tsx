@@ -1,6 +1,7 @@
 import { ReactElement } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useStaticData } from "@/data_context.tsx";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { pages } from "@/pages_config"
 
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
@@ -12,6 +13,17 @@ import { Button } from "@/components/ui/button";
 
 export default function Layout({ children }: { children: ReactElement }) {
 	const {static_data} = useStaticData();
+	const [close_button_exits_app] = usePersistedState<boolean>("settings.close_button_exits_app", false);
+
+	const handle_close = async () => {
+		const current_window = getCurrentWindow();
+		if (close_button_exits_app) {
+			await current_window.close();
+			return;
+		}
+		await current_window.hide();
+	};
+
 	return (
 		<SidebarProvider className="overflow-hidden">
 			<AppSidebar />
@@ -36,7 +48,7 @@ export default function Layout({ children }: { children: ReactElement }) {
 							<Button variant="ghost" className="rounded-full size-6 p-2" onClick={() => getCurrentWindow().toggleMaximize()}>
 								<Square />
 							</Button>
-							<Button variant="ghost" className="rounded-full size-6 p-2" onClick={() => getCurrentWindow().hide()}>
+							<Button variant="ghost" className="rounded-full size-6 p-2" onClick={handle_close}>
 								<X />
 							</Button>
 						</div>

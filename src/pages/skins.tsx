@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
 import { SortDirection } from "@/lib/utils";
 
@@ -463,9 +463,8 @@ export default function Skins() {
 							const unowned_after_craft = row.unowned_skins.filter(skin => !unique_loot_skins.has(skin.id)).length;
 
 							return (
-								<>
+								<Fragment key={row.champion_id}>
 									<TableRow
-										key={row.champion_id}
 										className={is_highlighted ? "bg-yellow-500/10 hover:bg-yellow-500/20" : ""}
 									>
 										<TableCell>
@@ -596,7 +595,7 @@ export default function Skins() {
 											</TableCell>
 										</TableRow>
 									)}
-								</>
+								</Fragment>
 							);
 						})}
 					</TableBody>

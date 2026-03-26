@@ -13,6 +13,7 @@ import { FilterDropdown } from "@/components/filter_dropdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useLoading } from "@/lib/loading_state.ts";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 
 type EternalProgress = {
 	item_id: number;
@@ -47,11 +48,11 @@ export default function Eternals() {
 	const { static_data } = useStaticData();
 	const { is_loading, loading_progress } = useLoading();
 	const [table_data, set_table_data] = useState<ChampionEternalsRow[]>([]);
-	const [sort_key, set_sort_key] = useState<SortKey>("starter");
-	const [sort_direction, set_sort_direction] = useState<SortDirection>("desc");
-	const [search, set_search] = useState<string>("");
-	const [selected_roles, set_selected_roles] = useState<string[]>([]);
-	const [hide_completed, set_hide_completed] = useState<boolean>(false);
+	const [sort_key, set_sort_key] = usePersistedState<SortKey>("eternals.sort_key", "starter");
+	const [sort_direction, set_sort_direction] = usePersistedState<SortDirection>("eternals.sort_direction", "desc");
+	const [search, set_search] = usePersistedState<string>("eternals.search", "");
+	const [selected_roles, set_selected_roles] = usePersistedState<string[]>("eternals.selected_roles", []);
+	const [hide_completed, set_hide_completed] = usePersistedState<boolean>("eternals.hide_completed", false);
 
 	useEffect(() => {
 		const new_table_data = Object.entries(static_data.champion_map).map(([champion_id_str, champion]) => {
@@ -208,8 +209,8 @@ export default function Eternals() {
 						{series.progress_percent.toFixed(1)}%
 					</Badge>
 				</div>
-				{series.eternals.map((eternal, eternal_idx) => (
-					<div key={eternal_idx} className="p-2 rounded bg-background space-y-1">
+					{series.eternals.map((eternal) => (
+						<div key={`${series.series_name}-${eternal.item_id}-${eternal.name}`} className="p-2 rounded bg-background space-y-1">
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div className="font-medium text-sm">{eternal.name}</div>
@@ -326,8 +327,8 @@ export default function Eternals() {
 										</TableCell>
 										<TableCell>
 											<div className="flex gap-1 flex-wrap">
-												{row.roles.map((role, idx) => (
-													<Badge key={idx} variant="outline">{role}</Badge>
+												{row.roles.map((role) => (
+													<Badge key={role} variant="outline">{role}</Badge>
 												))}
 											</div>
 										</TableCell>
