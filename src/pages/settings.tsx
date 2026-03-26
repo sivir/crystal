@@ -1,7 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { Github, MessageCircle } from "lucide-react";
 
 export default function Settings() {
+	const [close_button_exits_app, set_close_button_exits_app] = usePersistedState<boolean>("settings.close_button_exits_app", false);
+
 	return (
 		<div className="p-6 space-y-6">
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -44,6 +49,29 @@ export default function Settings() {
 					</CardContent>
 				</Card>
 			</div>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Behavior</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="flex items-start gap-3">
+						<Checkbox
+							id="close-button-exits-app"
+							checked={close_button_exits_app}
+							onCheckedChange={(checked) => set_close_button_exits_app(checked === true)}
+						/>
+						<div className="-mt-1">
+							<Label htmlFor="close-button-exits-app" className="cursor-pointer">
+								Close button exits app
+							</Label>
+							<p className="text-sm text-muted-foreground">
+								When disabled, clicking the close button hides Crystal to the system tray instead of fully closing it.
+							</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 
 			<Card>
 				<CardHeader>
