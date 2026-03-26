@@ -1,6 +1,6 @@
-use irelia::ws::{Subscriber, LcuWebSocket, types::EventKind};
+use irelia::ws::{ErrorHandler, Flow, LcuWebSocket, Subscriber, WebSocketError, types::EventKind};
 use irelia::rest::LcuClient;
-use std::{sync::Arc, time::Duration};
+use std::{ops::ControlFlow, sync::Arc, time::Duration};
 use tauri::{
 	menu::{Menu, MenuItem},
 	tray::TrayIconBuilder,
@@ -13,12 +13,27 @@ struct LcuEventHandler {
 	event_name: &'static str,
 }
 
+struct ManagedWsErrorHandler;
+
 impl Subscriber for LcuEventHandler {
 	fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
+		println!(
+			"LCU websocket event [{}] {} {}",
+			self.event_name,
+			event.2.event_type,
+			event.2.uri
+		);
 		if self.event_name == "gameflow" {
 			println!("gameflow event: {:?}", event.2.data["map"]["gameModeName"]);
 		}
 		let _ = self.app_handle.emit(self.event_name, event.2.clone());
+	}
+}
+
+impl ErrorHandler for ManagedWsErrorHandler {
+	fn on_error(&mut self, error: WebSocketError) -> ControlFlow<(), Flow> {
+		eprintln!("LCU websocket error: {error}");
+		ControlFlow::Break(())
 	}
 }
 
@@ -37,10 +52,9 @@ impl Data {
 		}
 	}
 
-	fn connect(&mut self, app_handle: AppHandle) -> Result<(), irelia::requests::Error> {
-		self.lcu_client = Some(LcuClient::connect()?);
-
-		let mut ws_client = LcuWebSocket::new();
+	fn build_ws(app_handle: AppHandle) -> LcuWebSocket {
+		println!("Creating LCU websocket worker and registering subscriptions");
+		let mut ws_client = LcuWebSocket::new_with_error_handler(ManagedWsErrorHandler);
 		ws_client.subscribe(
 			EventKind::json_api_event_callback("/lol-champ-select/v1/session"),
 			LcuEventHandler { app_handle: app_handle.clone(), event_name: "champ-select" },
@@ -49,11 +63,44 @@ impl Data {
 			EventKind::json_api_event_callback("/lol-gameflow/v1/session"),
 			LcuEventHandler { app_handle: app_handle.clone(), event_name: "gameflow" },
 		);
-		self.ws_client = Some(ws_client);
+		ws_client
+	}
 
-		Ok(())
+	fn websocket_finished(&self) -> bool {
+		self.ws_client.as_ref().map(|ws| ws.is_finished()).unwrap_or(true)
+	}
+
+	fn rebuild_websocket(&mut self, app_handle: AppHandle) {
+		println!("Rebuilding LCU websocket subscriptions");
+		if let Some(ws_client) = self.ws_client.take() {
+			let _ = ws_client.abort();
+		}
+		self.ws_client = Some(Self::build_ws(app_handle));
+	}
+
+	fn disconnect(&mut self) {
+		if let Some(ws_client) = self.ws_client.take() {
+			let _ = ws_client.abort();
+		}
+		self.lcu_client = None;
+		self.connected = false;
 	}
 }
+
+// #[tauri::command]
+// async fn lcu_request(state: State<'_, Arc<Mutex<Data>>>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
+// 	let client = { state.lock().await.lcu_client.clone() };
+//
+// 	match client {
+// 		Some(client) => match method.to_lowercase().as_str() {
+// 			"get" => client.get(&path).await.map_err(|e| e.to_string()),
+// 			"post" => client.post(&path, body.unwrap()).await.map_err(|e| e.to_string()),
+// 			"put" => client.put(&path, body.unwrap()).await.map_err(|e| e.to_string()),
+// 			_ => Err("Invalid method".to_string()),
+// 		},
+// 		None => Err("Not connected to League client".to_string()),
+// 	}
+// }
 
 #[tauri::command]
 async fn lcu_request(state: State<'_, Arc<Mutex<Data>>>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
@@ -128,34 +175,102 @@ pub fn run() {
 			let app_handle = app.app_handle().clone();
 
 			tauri::async_runtime::spawn(async move {
-				loop {
-					let mut state = thread_state.lock().await;
+					let mut consecutive_health_check_failures = 0u8;
+					const HEALTH_CHECK_FAILURE_THRESHOLD: u8 = 3;
 
-					if !state.connected {
-						match state.connect(app_handle.clone()) {
-							Ok(()) => {
-								println!("Successfully connected to League client");
-								state.connected = true;
-								app_handle.emit("connection", true).unwrap();
+				loop {
+					let (connected, client, websocket_finished) = {
+						let state = thread_state.lock().await;
+						(state.connected, state.lcu_client.clone(), state.websocket_finished())
+					};
+
+					let mut tooltip_connected = connected;
+
+					if !connected {
+						match LcuClient::connect() {
+							Ok(client) => {
+									consecutive_health_check_failures = 0;
+									println!("LCU REST client connected, starting websocket worker");
+									let ws_client = Data::build_ws(app_handle.clone());
+									let mut state = thread_state.lock().await;
+									state.lcu_client = Some(client);
+									state.ws_client = Some(ws_client);
+									if !state.connected {
+										println!("Successfully connected to League client");
+										state.connected = true;
+										tooltip_connected = true;
+										let _ = app_handle.emit("connection", true);
+									}
 							}
-							Err(e) => println!("{}", e),
+							Err(e) => {
+								tooltip_connected = false;
+								println!("{}", e);
+							}
 						}
 					} else {
-						if let Some(client) = &state.lcu_client {
-							if let Err(_) = client.get::<String>("/riotclient/auth-token").await {
-								println!("Lost connection to League client");
-								state.connected = false;
-								state.lcu_client = None;
-								state.ws_client = None;
-								app_handle.emit("connection", false).unwrap();
+							let connection_lost = match client.clone() {
+								Some(client) => client.get::<String>("/riotclient/auth-token").await.is_err(),
+								None => true,
+							};
+
+							if connection_lost {
+								consecutive_health_check_failures = consecutive_health_check_failures.saturating_add(1);
+								if consecutive_health_check_failures < HEALTH_CHECK_FAILURE_THRESHOLD {
+									println!(
+										"LCU health check failed ({}/{}), waiting before refreshing client",
+										consecutive_health_check_failures,
+										HEALTH_CHECK_FAILURE_THRESHOLD
+									);
+									tooltip_connected = true;
+								} else {
+									consecutive_health_check_failures = 0;
+									match LcuClient::connect() {
+										Ok(fresh_client) => {
+											println!("Refreshing LCU client after repeated failed health checks");
+											let mut state = thread_state.lock().await;
+											if state.connected {
+												state.lcu_client = Some(fresh_client);
+												if state.websocket_finished() {
+													state.rebuild_websocket(app_handle.clone());
+												} else {
+													println!("LCU websocket still running; skipping rebuild");
+												}
+											let _ = app_handle.emit("lcu-refresh", true);
+												tooltip_connected = true;
+											}
+										}
+										Err(_) => {
+											let mut state = thread_state.lock().await;
+											if state.connected {
+												println!("Lost connection to League client");
+												state.disconnect();
+												tooltip_connected = false;
+												let _ = app_handle.emit("connection", false);
+											}
+										}
+									}
+								}
+						} else {
+								consecutive_health_check_failures = 0;
+							tooltip_connected = true;
+							if websocket_finished {
+								println!("LCU websocket thread finished, rebuilding subscriptions");
+								let mut state = thread_state.lock().await;
+								if state.connected && state.websocket_finished() {
+									state.rebuild_websocket(app_handle.clone());
+										let _ = app_handle.emit("lcu-refresh", true);
+								}
 							}
 						}
 					}
 
-					app_handle.tray_by_id("main").unwrap().set_tooltip(Some(format!("crystal | {}", if state.connected { "connected" } else { "disconnected" }))).unwrap();
+					app_handle
+						.tray_by_id("main")
+						.unwrap()
+						.set_tooltip(Some(format!("crystal | {}", if tooltip_connected { "connected" } else { "disconnected" })))
+						.unwrap();
 
-					drop(state);
-					tokio::time::sleep(Duration::from_secs(20)).await;
+						tokio::time::sleep(Duration::from_secs(5)).await;
 				}
 			});
 
