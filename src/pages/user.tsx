@@ -5,6 +5,7 @@ import { challenge_icon, SortDirection, levels, get_level_color, get_progress_co
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Search, ArrowDown, ArrowUp, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,25 +14,97 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 
+type ProgressMode = "next" | "master";
+
 type ChallengeProps = {
 	challenge: APILCUChallenge;
 	progress: number;
-	next_threshold: number;
+	target_threshold: number;
+	target_label: string;
 }
 
-function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
+function getChallengeProgress(challenge: APILCUChallenge, progress_mode: ProgressMode) {
+	const next_level_index = levels.indexOf(challenge.currentLevel) + 1;
+	const next_level = next_level_index < levels.length ? levels[next_level_index] : "CHALLENGER";
+	const master_threshold = challenge.thresholds["MASTER"]?.value;
+	const next_threshold = challenge.thresholds[next_level]?.value || master_threshold || challenge.thresholds[challenge.currentLevel]?.value || challenge.currentValue || 1;
+	const target_threshold = progress_mode === "master" ? (master_threshold || next_threshold) : next_threshold;
+	const progress = (challenge.currentValue / target_threshold) * 100;
+
+	return {
+		progress,
+		target_threshold,
+		target_label: progress_mode === "master" ? "MASTER" : next_level,
+	};
+}
+
+
+function ChallengeSummary({ challenge }: { challenge: APILCUChallenge }) {
+	const threshold_entries = levels
+		.filter(level => challenge.thresholds[level]?.value != null)
+		.map(level => ({ level, value: challenge.thresholds[level].value }));
+
+	return (
+		<HoverCard openDelay={150} closeDelay={0}>
+			<HoverCardTrigger asChild>
+				<div className="flex flex-col min-w-0 flex-1 cursor-help">
+					<div className={`font-semibold text-sm truncate ${get_level_color(challenge.currentLevel)}`}>
+						{challenge.name}
+					</div>
+					<div className="text-xs text-muted-foreground line-clamp-2">
+						{challenge.description}
+					</div>
+				</div>
+			</HoverCardTrigger>
+			<HoverCardContent className="w-80 space-y-3" align="start">
+				<div className="space-y-1">
+					<div className={`text-sm font-semibold ${get_level_color(challenge.currentLevel)}`}>
+						{challenge.name}
+					</div>
+					<p className="text-xs text-muted-foreground whitespace-pre-wrap">
+						{challenge.description}
+					</p>
+				</div>
+
+				<div className="flex items-center justify-between text-xs">
+					<span className="text-muted-foreground">Current progress</span>
+					<span className={get_level_color(challenge.currentLevel)}>{challenge.currentLevel}</span>
+				</div>
+				<div className="text-sm font-medium">{challenge.currentValue.toLocaleString()}</div>
+
+				<div className="space-y-2">
+					<div className="text-xs font-medium text-muted-foreground">Tier thresholds</div>
+					<div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+						{threshold_entries.map(({ level, value }) => (
+							<div key={level} className="contents">
+								<span className={get_level_color(level)}>{level}</span>
+								<span className="text-right text-muted-foreground">{value.toLocaleString()}</span>
+							</div>
+						))}
+					</div>
+				</div>
+			</HoverCardContent>
+		</HoverCard>
+	);
+}
+
+function ChallengeCard({ challenge, progress_mode }: { challenge: ChallengeProps, progress_mode: ProgressMode }) {
 	const { static_data } = useStaticData();
 	const [dialog_open, set_dialog_open] = useState(false);
+	const show_target_label = !["MASTER", "GRANDMASTER", "CHALLENGER"].includes(challenge.challenge.currentLevel);
 
 	const has_id_list = challenge.challenge.availableIds.length > 0 || challenge.challenge.completedIds.length > 0;
 
 	const parent_challenge = challenge.challenge.parentId ? static_data.lcu_data[challenge.challenge.parentId] : null;
 	const parent_info = parent_challenge ? (() => {
-		const next_level_index = levels.indexOf(parent_challenge.currentLevel) + 1;
-		const next_level = next_level_index < levels.length ? levels[next_level_index] : "CHALLENGER";
-		const next_threshold = parent_challenge.thresholds[next_level]?.value || parent_challenge.thresholds["MASTER"]?.value || parent_challenge.thresholds[parent_challenge.currentLevel]?.value || parent_challenge.currentValue;
-		const progress = Math.min((parent_challenge.currentValue / next_threshold) * 100, 100);
-		return { name: parent_challenge.name, progress, current: parent_challenge.currentValue, target: next_threshold, level: parent_challenge.currentLevel };
+		const parent_progress = getChallengeProgress(parent_challenge, progress_mode);
+		return {
+			name: parent_challenge.name,
+			progress: Math.min(parent_progress.progress, 100),
+			current: parent_challenge.currentValue,
+			target: parent_progress.target_threshold,
+			level: parent_challenge.currentLevel,
+		};
 	})() : null;
 
 	function get_id_name(id: number): string {
@@ -57,14 +130,7 @@ function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 						alt={challenge.challenge.name}
 						className="w-10 h-10 rounded-full shrink-0"
 					/>
-					<div className="flex flex-col min-w-0 flex-1">
-						<div className={`font-semibold text-sm truncate ${get_level_color(challenge.challenge.currentLevel)}`}>
-							{challenge.challenge.name}
-						</div>
-						<div className="text-xs text-muted-foreground line-clamp-2">
-							{challenge.challenge.description}
-						</div>
-					</div>
+						<ChallengeSummary challenge={challenge.challenge} />
 					{has_id_list && (
 						<List className="w-4 h-4 text-muted-foreground shrink-0" />
 					)}
@@ -73,8 +139,10 @@ function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 				{/* Progress section */}
 				<div className="mt-auto space-y-1">
 					<div className="flex justify-between text-xs">
-						<span className={get_level_color(challenge.challenge.currentLevel)}>{challenge.challenge.currentLevel}</span>
-						<span className="text-muted-foreground">{challenge.challenge.currentValue} / {challenge.next_threshold}</span>
+							<span className={get_level_color(challenge.challenge.currentLevel)}>
+								{show_target_label ? `${challenge.challenge.currentLevel} → ${challenge.target_label}` : challenge.challenge.currentLevel}
+							</span>
+							<span className="text-muted-foreground">{challenge.challenge.currentValue} / {challenge.target_threshold}</span>
 					</div>
 					<Progress
 						value={Math.min(challenge.progress, 100)}
@@ -87,7 +155,7 @@ function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 				{parent_info && (
 					<div className="mt-3 pt-2 border-t border-border/50 space-y-1">
 						<div className="flex justify-between text-xs">
-							<span className={`truncate ${get_level_color(parent_info.level)}`}>{parent_info.name}</span>
+								<span className={`truncate ${get_level_color(parent_info.level)}`}>{parent_info.name}</span>
 							<span className="text-muted-foreground shrink-0 ml-2">{parent_info.current} / {parent_info.target}</span>
 						</div>
 						<Progress
@@ -117,7 +185,7 @@ function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 									.map(id => ({ id, name: get_id_name(id) }))
 									.sort((a, b) => a.name.localeCompare(b.name))
 									.map(({ id, name }) => (
-										<span key={id} className="bg-green-900/50 text-green-200 px-2 py-0.5 rounded text-xs">
+										<span key={id} className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 px-2 py-0.5 rounded text-xs">
 											{name}
 										</span>
 									))}
@@ -132,7 +200,7 @@ function ChallengeCard({ challenge }: { challenge: ChallengeProps }) {
 									.map(id => ({ id, name: get_id_name(id) }))
 									.sort((a, b) => a.name.localeCompare(b.name))
 									.map(({ id, name }) => (
-										<span key={id} className="bg-yellow-900/50 text-yellow-200 px-2 py-0.5 rounded text-xs">
+										<span key={id} className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 px-2 py-0.5 rounded text-xs">
 											{name}
 										</span>
 									))}
@@ -150,6 +218,7 @@ export default function User() {
 	const [search, set_search] = usePersistedState("user.search", "");
 	const [sort_by, set_sort_by] = usePersistedState<"name" | "progress">("user.sort_by", "progress");
 	const [sort_order, set_sort_order] = usePersistedState<SortDirection>("user.sort_order", "desc");
+	const [progress_mode, set_progress_mode] = usePersistedState<ProgressMode>("user.progress_mode", "next");
 	const [hide_masters, set_hide_masters] = usePersistedState("user.hide_masters", true);
 	const [hide_legacy, set_hide_legacy] = usePersistedState("user.hide_legacy", true);
 	const [hide_capstone, set_hide_capstone] = usePersistedState("user.hide_capstone", true);
@@ -170,15 +239,13 @@ export default function User() {
 		}
 
 		let props_challenges = challenges.map(c => {
-			const next_level_index = levels.indexOf(c.currentLevel) + 1;
-			const next_level = next_level_index < levels.length ? levels[next_level_index] : "CHALLENGER";
-			const next_threshold = c.thresholds[next_level]?.value || c.thresholds["MASTER"]?.value || c.thresholds[c.currentLevel]?.value || c.currentValue;
-			const progress = (c.currentValue / next_threshold) * 100;
+			const { progress, target_threshold, target_label } = getChallengeProgress(c, progress_mode);
 
 			return {
 				challenge: c,
 				progress,
-				next_threshold
+				target_threshold,
+				target_label,
 			};
 		}).sort((a, b) => {
 			if (sort_by === "name") return a.challenge.name.localeCompare(b.challenge.name) * (sort_order === "asc" ? -1 : 1);
@@ -195,11 +262,11 @@ export default function User() {
 		});
 
 		if (hide_masters) {
-			props_challenges = props_challenges.filter(c => c.challenge.pointsAwarded < 100 && c.challenge.currentValue < c.next_threshold);
+			props_challenges = props_challenges.filter(c => c.challenge.pointsAwarded < 100 && c.challenge.currentValue < c.target_threshold);
 		}
 
 		return props_challenges;
-	}, [static_data.lcu_data, hide_masters, hide_legacy, search, sort_by, sort_order, hide_capstone]);
+	}, [static_data.lcu_data, hide_masters, hide_legacy, search, sort_by, sort_order, hide_capstone, progress_mode]);
 
 	return (
 		<div className="p-6 space-y-6">
@@ -221,6 +288,16 @@ export default function User() {
 					<SelectContent>
 						<SelectItem value="name">Name</SelectItem>
 						<SelectItem value="progress">Progress</SelectItem>
+					</SelectContent>
+				</Select>
+
+				<Select onValueChange={(mode) => { set_progress_mode(mode as ProgressMode) }} value={progress_mode}>
+					<SelectTrigger className="w-[180px]">
+						<SelectValue placeholder="Progress target" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="next">To Next Level</SelectItem>
+						<SelectItem value="master">To Master Tier</SelectItem>
 					</SelectContent>
 				</Select>
 
@@ -263,7 +340,7 @@ export default function User() {
 
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 				{filtered_challenges.map(challenge => {
-					return (<ChallengeCard key={challenge.challenge.id} challenge={challenge} />);
+					return (<ChallengeCard key={challenge.challenge.id} challenge={challenge} progress_mode={progress_mode} />);
 				})}
 			</div>
 		</div>

@@ -179,7 +179,7 @@ export default function Champions() {
 					if (c.mastery_level < target_level) {
 						// Points to finish current level
 						points_needed = c.points_until_next_level;
-						// Add estimated points for remaining levels (rough estimate: ~21600 per level after 5)
+						// Add estimated points for remaining levels
 						for (let lvl = c.mastery_level + 1; lvl < target_level; lvl++) {
 							points_needed += mastery_per_level[lvl] || 11000;
 						}
