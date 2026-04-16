@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
 const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
 
-const mastery_per_level = [0, 0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000];
+const mastery_per_level = [0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000]; // mastery to get to the next level from this level
 
 type ChampionTableRow = {
 	name: string;
@@ -44,7 +44,7 @@ export default function Champions() {
 	const [champion_table_data, set_champion_table_data] = useState<ChampionTableRow[]>([]);
 	const [search, set_search] = useState<string>('');
 
-	// Persisted state
+	// persisted state
 	const [selected_roles, set_selected_roles] = usePersistedState<string[]>('champions.selected_roles', []);
 	const [sort_field, set_sort_field] = usePersistedState<keyof ChampionTableRow>('champions.sort_field', 'mastery_level');
 	const [sort_direction, set_sort_direction] = usePersistedState<SortDirection>('champions.sort_direction', 'desc');
@@ -140,7 +140,7 @@ export default function Champions() {
 		available_champions_count: number;
 	};
 
-	// Calculate all mastery challenges with their completion requirements
+	// completion requirements for al the mastery challenges
 	const all_mastery_challenges = useMemo(() => {
 		if (!has_lcu_data || champion_table_data.length === 0) return [];
 
@@ -157,29 +157,27 @@ export default function Champions() {
 			const class_name = classes[class_index];
 			const target_level = is_m10 ? 10 : 7;
 
-			// Get next threshold
+			// get next threshold
 			const thresholds = Object.entries(challenge.thresholds)
 				.sort(([, a], [, b]) => a.value - b.value)
 				.map(([, v]) => v.value);
 			const current = challenge.currentValue;
 			const next_threshold = thresholds.find(t => t > current) || thresholds[thresholds.length - 1];
 
-			// Skip if already at max
+			// skip if already at max
 			if (current >= next_threshold) continue;
 
 			const champions_needed = next_threshold - current;
 
-			// Use availableIds from the challenge to get eligible champions
+			// get eligible champions
 			const available_ids = challenge.availableIds || [];
 			const eligible_champions = champion_table_data
 				.filter(c => available_ids.includes(c.id) && c.mastery_level < target_level)
 				.map(c => {
-					// Calculate points needed to reach target level
+					// points needed to reach target level
 					let points_needed = 0;
 					if (c.mastery_level < target_level) {
-						// Points to finish current level
 						points_needed = c.points_until_next_level;
-						// Add estimated points for remaining levels
 						for (let lvl = c.mastery_level + 1; lvl < target_level; lvl++) {
 							points_needed += mastery_per_level[lvl] || 11000;
 						}
@@ -215,7 +213,7 @@ export default function Champions() {
 			});
 		}
 
-		// Sort by total points needed (challenges with enough champions first, then by points)
+		// sort by total points needed
 		return results.sort((a, b) => {
 			if (a.has_enough_champions && !b.has_enough_champions) return -1;
 			if (!a.has_enough_champions && b.has_enough_champions) return 1;
