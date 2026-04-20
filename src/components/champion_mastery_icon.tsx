@@ -17,10 +17,12 @@ export function ChampionMasteryIcon({ data, className }: ChampionMasteryIconProp
 			<HoverCardTrigger asChild>
 				<div className={cn("relative inline-block w-16 h-16 cursor-pointer", className)}>
 					<div className="relative overflow-hidden rounded-md w-full h-full">
-						<img 
-							src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${data.championId}.png`} 
-							alt={`Champion ${data.championId}`} 
+						<img
+							src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${data.championId}.png`}
+							alt={`Champion ${data.championId}`}
 							className="w-full h-full object-cover"
+							loading="lazy"
+							decoding="async"
 						/>
 						
 						<div className="absolute bottom-0 left-0 w-full h-[10%] bg-black/50">

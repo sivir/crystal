@@ -1,6 +1,7 @@
 import { useStaticData, useSessionData, APIChampSelectPlayer, default_mastery_data } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
 import { champion_name, lcu_get_request } from "@/lib/utils.ts";
+import { ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID, ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID } from "@/lib/challenges";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,9 +9,6 @@ import { Check, X } from "lucide-react";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePersistedState } from "@/hooks/use-persisted-state";
-
-const ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID = 602002; // arena (win on all champs)
-const ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID = 101301; // aram (s- or better on all champs)
 
 const ARENA_QUEUE_ID = 1700;
 const ARAM_QUEUE_ID = 450;
@@ -44,21 +42,25 @@ export default function Lobby() {
 		}
 		if (game_mode == ARENA_QUEUE_ID) {
 			set_is_loading(true);
-			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list").then((response) => { // typo is intentional
-				set_table_champions(response.map(champion_id => ({
-					champion_id,
-					is_completed: static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID].completedIds.includes(champion_id)
-				})));
-				set_is_loading(false);
-			});
+			const arena_completed = static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID]?.completedIds ?? [];
+			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list") // typo is intentional
+				.then((response) => {
+					set_table_champions((response ?? []).map(champion_id => ({
+						champion_id,
+						is_completed: arena_completed.includes(champion_id)
+					})));
+				})
+				.catch(error => console.error("Error fetching arena champion list:", error))
+				.finally(() => set_is_loading(false));
 		}
 		if (game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID) {
+			const aram_completed = static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID]?.completedIds ?? [];
 			const champions = session_data.champ_select_session?.myTeam.map((player: APIChampSelectPlayer) => ({
 				champion_id: player.championId,
-				is_completed: static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID].completedIds.includes(player.championId)
+				is_completed: aram_completed.includes(player.championId)
 			})).concat(session_data.champ_select_session?.benchChampions.map((benchChamp: any) => ({
 				champion_id: benchChamp.championId,
-				is_completed: static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID].completedIds.includes(benchChamp.championId)
+				is_completed: aram_completed.includes(benchChamp.championId)
 			}))).filter(champion => champion.champion_id > 0) ?? [];
 			set_table_champions(champions);
 			set_is_loading(false);
@@ -86,8 +88,6 @@ export default function Lobby() {
 	return (
 		<div className="p-6 space-y-6">
 			<h1 className="text-3xl font-bold">Lobby</h1>
-
-			<>gameflow phase: {session_data.gameflow_session?.phase}, queue id: {session_data.gameflow_session?.gameData?.queue?.id}, has riot data: {static_data.riot_data ? "true" : "false"}</>
 
 			{!static_data.connected && (
 				<Card>

@@ -5,8 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Check, X } from "lucide-react";
 import { challenge_icon, mastery_color } from "@/lib/utils";
-
-const tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
+import { TRACKED_CHAMPION_CHALLENGES as tracked_challenges } from "@/lib/challenges";
 
 export function ChampionDetailCard({ champion_id }: { champion_id: number }) {
 	const { static_data, has_lcu_data } = useStaticData();
@@ -100,10 +99,12 @@ export function ChampionDetailCard({ champion_id }: { champion_id: number }) {
 		<div className="w-80 space-y-3">
 			{/* Champion Header */}
 			<div className="flex items-center gap-3">
-				<img 
+				<img
 					src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champion_id}.png`}
 					alt={champion.name}
 					className="w-12 h-12 rounded-md"
+					loading="lazy"
+					decoding="async"
 				/>
 				<div className="flex-1">
 					<h3 className="font-semibold text-base">{champion.name}</h3>

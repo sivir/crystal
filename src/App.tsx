@@ -79,16 +79,6 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 					return database_data;
 				});
 
-				const standalone_supabase_start = performance.now();
-				void supabase_invoke<APIDatabaseData>("get-user", {
-					...supabase_body
-				}).then((standalone_database_data) => {
-					console.log(`supabase get-user (standalone) took ${(performance.now() - standalone_supabase_start).toFixed(1)}ms`);
-					console.log("standalone_database_data", standalone_database_data);
-				}).catch(error => {
-					console.error("Error timing standalone riot profile data:", error);
-				});
-
 				let has_database_mastery = false;
 
 				if (database_data?.data) {

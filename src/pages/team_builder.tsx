@@ -2,6 +2,7 @@ import { APILCUChallenge, useStaticData, default_mastery_data } from "@/data_con
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { challenge_icon, classes, globetrotter_regions } from "@/lib/utils";
+import { VARIETYS_OVERRATED_CHALLENGE_ID as VARIETYS_OVERRATED_ID } from "@/lib/challenges";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -11,8 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
-
-const VARIETYS_OVERRATED_ID = 303408;
 
 export default function TeamBuilder() {
 	const { static_data } = useStaticData();

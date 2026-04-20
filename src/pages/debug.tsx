@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -54,6 +55,29 @@ export default function Debug() {
 				</Alert>
 			)}
 			<div className="flex flex-col gap-2">
+				<Card>
+					<CardHeader>
+						<CardTitle>Developer Logging</CardTitle>
+						<CardDescription>
+							Mirror app diagnostics to the browser devtools console.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="flex items-start gap-3">
+							<Checkbox
+								id="dev-logging-enabled" // does nothing yet
+							/>
+							<div className="-mt-1">
+								<Label htmlFor="dev-logging-enabled" className="cursor-pointer">
+									Enable verbose console logging
+								</Label>
+								<p className="text-sm text-muted-foreground">
+									When off, only errors are written to the console. Turn this on to inspect refresh flow, LCU events, and request timings.
+								</p>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
 				<Card>
 					<CardHeader>
 						<CardTitle>LCU API Request</CardTitle>

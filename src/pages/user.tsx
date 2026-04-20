@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { useStaticData, APILCUChallenge } from "@/data_context";
 import { challenge_icon, SortDirection, levels, get_level_color, get_progress_color } from "@/lib/utils";
 
@@ -175,23 +175,14 @@ function ChallengeTagBadges({ assigned_tags }: { assigned_tags: string[] }) {
 }
 
 
-function ChallengeSummary({ challenge }: { challenge: APILCUChallenge }) {
+function ChallengeSummary({ challenge, children }: { challenge: APILCUChallenge; children: ReactNode }) {
 	const threshold_entries = levels
 		.filter(level => challenge.thresholds[level]?.value != null)
 		.map(level => ({ level, value: challenge.thresholds[level].value }));
 
 	return (
 		<HoverCard openDelay={150} closeDelay={0}>
-			<HoverCardTrigger asChild>
-				<div className="flex flex-col min-w-0 flex-1 cursor-help">
-					<div className={`font-semibold text-sm truncate ${get_level_color(challenge.currentLevel)}`}>
-						{challenge.name}
-					</div>
-					<div className="text-xs text-muted-foreground line-clamp-2">
-						{challenge.description}
-					</div>
-				</div>
-			</HoverCardTrigger>
+			<HoverCardTrigger asChild>{children}</HoverCardTrigger>
 			<HoverCardContent className="w-80 space-y-3" align="start">
 				<div className="space-y-1">
 					<div className={`text-sm font-semibold ${get_level_color(challenge.currentLevel)}`}>
@@ -266,18 +257,25 @@ function ChallengeCard({
 	return (
 		<>
 			<Card
-				className={`p-3 flex flex-col h-full ${has_id_list ? 'cursor-pointer hover:bg-accent/50 transition-colors' : ''}`}
+				className={`p-2 flex flex-col h-full ${has_id_list ? 'cursor-pointer hover:bg-accent/50 transition-colors' : ''}`}
 				onClick={() => has_id_list && set_dialog_open(true)}
 			>
 				{/* Main challenge info */}
-				<div className="flex gap-3 mb-2">
-					<img
-						src={challenge_icon(challenge.challenge)}
-						alt={challenge.challenge.name}
-						className="w-10 h-10 rounded-full shrink-0"
-					/>
-						<ChallengeSummary challenge={challenge.challenge} />
-						<div className="flex items-start gap-1 shrink-0">
+				<div className="mb-2">
+					<div className="flex items-center gap-2">
+						<ChallengeSummary challenge={challenge.challenge}>
+							<div className="flex items-center gap-2 min-w-0 flex-1 cursor-help">
+								<img
+									src={challenge_icon(challenge.challenge)}
+									alt={challenge.challenge.name}
+									className="w-8 h-8 rounded-full shrink-0"
+								/>
+								<div className={`font-semibold text-sm flex-1 min-w-0 truncate ${get_level_color(challenge.challenge.currentLevel)}`}>
+									{challenge.challenge.name}
+								</div>
+							</div>
+						</ChallengeSummary>
+						<div className="flex items-center gap-1 shrink-0">
 							<ChallengeTagSelector
 								tags={tags}
 								assigned_tags={challenge.assigned_tags}
@@ -285,9 +283,13 @@ function ChallengeCard({
 								compact
 							/>
 							{has_id_list && (
-								<List className="w-4 h-4 text-muted-foreground shrink-0 mt-1.5" />
+								<List className="w-4 h-4 text-muted-foreground shrink-0" />
 							)}
 						</div>
+					</div>
+					<div className="text-xs text-muted-foreground line-clamp-2 mt-1">
+						{challenge.challenge.description}
+					</div>
 				</div>
 
 				{/* Progress section */}

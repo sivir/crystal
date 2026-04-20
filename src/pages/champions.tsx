@@ -20,8 +20,13 @@ import { levels } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
-const m7_challenges = [401201, 401202, 401203, 401204, 401205, 401206];
-const m10_challenges = [401207, 401208, 401209, 401210, 401211, 401212];
+import {
+	CATCH_EM_ALL_CHALLENGE_ID,
+	M7_CHALLENGES as m7_challenges,
+	M10_CHALLENGES as m10_challenges,
+	MASTERY_HEADLINE_CHALLENGES,
+	TRACKED_CHAMPION_CHALLENGES as default_tracked_challenges,
+} from "@/lib/challenges";
 
 const mastery_per_level = [0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000]; // mastery to get to the next level from this level
 
@@ -36,8 +41,6 @@ type ChampionTableRow = {
 	points_until_next_level: number;
 	checks: boolean[];
 }
-
-const default_tracked_challenges = [101301, 120002, 202303, 210001, 210002, 401106, 505001, 602002, 602001];
 
 export default function Champions() {
 	const { static_data, has_lcu_data } = useStaticData();
@@ -65,7 +68,7 @@ export default function Champions() {
 				mastery_points: current_mastery_data.championPoints,
 				points_since_last_level: current_mastery_data.championPointsSinceLastLevel,
 				points_until_next_level: current_mastery_data.championPointsUntilNextLevel,
-				checks: default_tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds.includes(parseInt(id)))
+				checks: default_tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds?.includes(parseInt(id)) ?? false)
 			};
 		}));
 	}, [static_data.champion_map, static_data.mastery_data, static_data.lcu_data]);
@@ -122,8 +125,8 @@ export default function Champions() {
 		if (!has_lcu_data) {
 			return -1;
 		}
-		return static_data.lcu_data[401101].currentValue;
-	}, [filtered_table_data]);
+		return static_data.lcu_data[CATCH_EM_ALL_CHALLENGE_ID]?.currentValue ?? -1;
+	}, [has_lcu_data, static_data.lcu_data]);
 
 	type MasteryChallengeInfo = {
 		id: number;
@@ -253,12 +256,17 @@ export default function Champions() {
 										return null;
 									}
 
-									const m7_thresholds = Object.entries(static_data.lcu_data[m7_challenges[index]].thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
-									const m10_thresholds = Object.entries(static_data.lcu_data[m10_challenges[index]].thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
-									const m7_current = static_data.lcu_data[m7_challenges[index]].currentValue;
-									const m10_current = static_data.lcu_data[m10_challenges[index]].currentValue;
-									const m7_max = static_data.lcu_data[m7_challenges[index]].thresholds["MASTER"].value;
-									//const m10_max = static_data.lcu_data[m10_challenges[index]].thresholds["MASTER"].value;
+									const m7_challenge = static_data.lcu_data[m7_challenges[index]];
+									const m10_challenge = static_data.lcu_data[m10_challenges[index]];
+									if (!m7_challenge || !m10_challenge) {
+										return null;
+									}
+
+									const m7_thresholds = Object.entries(m7_challenge.thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
+									const m10_thresholds = Object.entries(m10_challenge.thresholds).sort(([, a], [_, b]) => a.value - b.value).map(value => value[1].value);
+									const m7_current = m7_challenge.currentValue;
+									const m10_current = m10_challenge.currentValue;
+									const m7_max = m7_challenge.thresholds["MASTER"]?.value ?? m7_thresholds[m7_thresholds.length - 1];
 
 									const chart_data = [{
 										name: class_name,
@@ -349,7 +357,7 @@ export default function Champions() {
 				<Card>
 					<CardContent className="pt-6">
 						<div className="grid grid-cols-2 gap-3">
-							{[401101, 401104, 401102, 401105, 401103, 401107].map(challengeId => {
+							{MASTERY_HEADLINE_CHALLENGES.map(challengeId => {
 								if (!has_lcu_data) return null;
 								const challenge = static_data.lcu_data[challengeId];
 								if (!challenge) return null;
@@ -511,7 +519,7 @@ export default function Champions() {
 						items={default_tracked_challenges}
 						selected_items={selected_challenges}
 						set_selected_items={set_selected_challenges}
-						item_to_label={(item: number) => static_data.lcu_data[item].name}
+						item_to_label={(item: number) => static_data.lcu_data[item]?.name ?? `Challenge ${item}`}
 					/>
 				</div>
 			</div>
@@ -540,7 +548,7 @@ export default function Champions() {
 										</div>
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>{static_data.lcu_data[x].description} ({static_data.lcu_data[x].completedIds.length} / {Object.keys(static_data.champion_map).length})</p>
+										<p>{static_data.lcu_data[x]?.description ?? `Challenge ${x}`} ({static_data.lcu_data[x]?.completedIds?.length ?? 0} / {Object.keys(static_data.champion_map).length})</p>
 									</TooltipContent>
 								</Tooltip>
 							</TableHead>)}

@@ -24,8 +24,9 @@ export default function Profile() {
 	const handle_icon_click = (id: number) => {
 		if (active_slot !== null) {
 			set_profile_icons(prev => {
-				prev[active_slot] = id;
-				return prev;
+				const next = [...prev];
+				next[active_slot] = id;
+				return next;
 			});
 			set_active_slot(null);
 		}

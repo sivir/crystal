@@ -321,6 +321,8 @@ export default function Eternals() {
 													src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${row.champion_id}.png`}
 													alt={row.champion_name}
 													className="w-8 h-8 rounded"
+													loading="lazy"
+													decoding="async"
 												/>
 												<span className="font-medium">{row.champion_name}</span>
 											</div>

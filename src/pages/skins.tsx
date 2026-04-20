@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
 import { SortDirection } from "@/lib/utils";
+import { SKIN_CHALLENGES } from "@/lib/challenges";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -209,17 +210,14 @@ export default function Skins() {
 	const skin_data_summary = useMemo<SkinDataSummary | null>(() => {
 		if (Object.keys(static_data.skin_map).length === 0 || all_skins.length === 0) return null;
 
-		const challenge_ids = {
-			total: 510001,
-			legacy: 510005,
-			victorious: 510006,
-			epic: 510010,
-			legendary: 510009,
-			mythic: 510008,
-			ultimate: 510007,
-			champions_5plus: 510004,
-			champions_15plus: 510003,
-		};
+		const challenge_ids = SKIN_CHALLENGES;
+
+		const entry = (id: number) => static_data.lcu_data[id];
+		const required_ids = Object.values(challenge_ids);
+		if (required_ids.some(id => !entry(id))) return null;
+
+		const current_value = (id: number) => entry(id)?.currentValue ?? 0;
+		const master_threshold = (id: number) => entry(id)?.thresholds?.MASTER?.value ?? 0;
 
 		const loot_contribution_total = loot_skins.length;
 		const loot_contribution_legacy = loot_skins.filter(skin => skin.legacy).length;
@@ -257,54 +255,54 @@ export default function Skins() {
 			}
 		});
 
-		const current_champions_5plus = static_data.lcu_data[challenge_ids.champions_5plus].currentValue;
+		const current_champions_5plus = current_value(challenge_ids.champions_5plus);
 		const loot_contribution_champions_5plus = champions_5plus_after_loot - current_champions_5plus;
 
 		return {
 			total: {
-				current: static_data.lcu_data[challenge_ids.total].currentValue,
+				current: current_value(challenge_ids.total),
 				loot_contribution: loot_contribution_total,
-				requirement: static_data.lcu_data[challenge_ids.total].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.total),
 			},
 			victorious: {
-				current: static_data.lcu_data[challenge_ids.victorious].currentValue,
+				current: current_value(challenge_ids.victorious),
 				loot_contribution: 0,
-				requirement: static_data.lcu_data[challenge_ids.victorious].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.victorious),
 			},
 			legacy: {
-				current: static_data.lcu_data[challenge_ids.legacy].currentValue,
+				current: current_value(challenge_ids.legacy),
 				loot_contribution: loot_contribution_legacy,
-				requirement: static_data.lcu_data[challenge_ids.legacy].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.legacy),
 			},
 			epic: {
-				current: static_data.lcu_data[challenge_ids.epic].currentValue,
+				current: current_value(challenge_ids.epic),
 				loot_contribution: loot_contribution_epic,
-				requirement: static_data.lcu_data[challenge_ids.epic].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.epic),
 			},
 			legendary: {
-				current: static_data.lcu_data[challenge_ids.legendary].currentValue,
+				current: current_value(challenge_ids.legendary),
 				loot_contribution: loot_contribution_legendary,
-				requirement: static_data.lcu_data[challenge_ids.legendary].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.legendary),
 			},
 			mythic: {
-				current: static_data.lcu_data[challenge_ids.mythic].currentValue,
+				current: current_value(challenge_ids.mythic),
 				loot_contribution: loot_contribution_mythic,
-				requirement: static_data.lcu_data[challenge_ids.mythic].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.mythic),
 			},
 			ultimate: {
-				current: static_data.lcu_data[challenge_ids.ultimate].currentValue,
+				current: current_value(challenge_ids.ultimate),
 				loot_contribution: loot_contribution_ultimate,
-				requirement: static_data.lcu_data[challenge_ids.ultimate].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.ultimate),
 			},
 			champions_5plus: {
 				current: current_champions_5plus,
 				loot_contribution: loot_contribution_champions_5plus,
-				requirement: static_data.lcu_data[challenge_ids.champions_5plus].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.champions_5plus),
 			},
 			champions_15plus: {
-				current: static_data.lcu_data[challenge_ids.champions_15plus].currentValue,
+				current: current_value(challenge_ids.champions_15plus),
 				loot_contribution: max_champion_total,
-				requirement: static_data.lcu_data[challenge_ids.champions_15plus].thresholds.MASTER.value,
+				requirement: master_threshold(challenge_ids.champions_15plus),
 			},
 		};
 	}, [static_data.skin_map, all_skins, owned_skins, loot_skins, static_data.lcu_data]);
@@ -481,6 +479,8 @@ export default function Skins() {
 													src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${row.champion_id}.png`}
 													alt={row.champion_name}
 													className="w-8 h-8 rounded"
+													loading="lazy"
+													decoding="async"
 												/>
 												<span className="font-medium">{row.champion_name}</span>
 											</div>
