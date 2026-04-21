@@ -17,15 +17,15 @@ struct ManagedWsErrorHandler;
 
 impl Subscriber for LcuEventHandler {
 	fn on_event(&mut self, event: &irelia::ws::types::Event, _: &mut bool) {
-		println!(
-			"LCU websocket event [{}] {} {}",
-			self.event_name,
-			event.2.event_type,
-			event.2.uri
-		);
-		if self.event_name == "gameflow" {
-			println!("gameflow event: {:?}", event.2.data["map"]["gameModeName"]);
-		}
+		// println!(
+		// 	"LCU websocket event [{}] {} {}",
+		// 	self.event_name,
+		// 	event.2.event_type,
+		// 	event.2.uri
+		// );
+		// if self.event_name == "gameflow" {
+		// 	println!("gameflow event: {:?}", event.2.data["map"]["gameModeName"]);
+		// }
 		let _ = self.app_handle.emit(self.event_name, event.2.clone());
 	}
 }
@@ -175,8 +175,8 @@ pub fn run() {
 			let app_handle = app.app_handle().clone();
 
 			tauri::async_runtime::spawn(async move {
-					let mut consecutive_health_check_failures = 0u8;
-					const HEALTH_CHECK_FAILURE_THRESHOLD: u8 = 3;
+				let mut consecutive_health_check_failures = 0u8;
+				const HEALTH_CHECK_FAILURE_THRESHOLD: u8 = 3;
 
 				loop {
 					let (connected, client, websocket_finished) = {
@@ -189,6 +189,10 @@ pub fn run() {
 					if !connected {
 						match LcuClient::connect() {
 							Ok(client) => {
+								if let Err(e) = client.get::<serde_json::Value>("/lol-summoner/v1/current-summoner").await {
+									tooltip_connected = false;
+									println!("LCU client connected but health check failed: {}", e);
+								} else {
 									consecutive_health_check_failures = 0;
 									println!("LCU REST client connected, starting websocket worker");
 									let ws_client = Data::build_ws(app_handle.clone());
@@ -201,6 +205,7 @@ pub fn run() {
 										tooltip_connected = true;
 										let _ = app_handle.emit("connection", true);
 									}
+								}
 							}
 							Err(e) => {
 								tooltip_connected = false;
@@ -208,69 +213,69 @@ pub fn run() {
 							}
 						}
 					} else {
-							let connection_lost = match client.clone() {
-								Some(client) => client.get::<String>("/riotclient/auth-token").await.is_err(),
-								None => true,
-							};
+						let connection_lost = match client.clone() {
+							Some(client) => client.get::<serde_json::Value>("/lol-summoner/v1/current-summoner").await.is_err(),
+							None => true,
+						};
 
-							if connection_lost {
-								consecutive_health_check_failures = consecutive_health_check_failures.saturating_add(1);
-								if consecutive_health_check_failures < HEALTH_CHECK_FAILURE_THRESHOLD {
-									println!(
-										"LCU health check failed ({}/{}), waiting before refreshing client",
-										consecutive_health_check_failures,
-										HEALTH_CHECK_FAILURE_THRESHOLD
-									);
-									tooltip_connected = true;
-								} else {
-									consecutive_health_check_failures = 0;
-									match LcuClient::connect() {
-										Ok(fresh_client) => {
-											println!("Refreshing LCU client after repeated failed health checks");
-											let mut state = thread_state.lock().await;
-											if state.connected {
-												state.lcu_client = Some(fresh_client);
-												if state.websocket_finished() {
-													state.rebuild_websocket(app_handle.clone());
-												} else {
-													println!("LCU websocket still running; skipping rebuild");
-												}
-											let _ = app_handle.emit("lcu-refresh", true);
-												tooltip_connected = true;
+						if connection_lost {
+							consecutive_health_check_failures = consecutive_health_check_failures.saturating_add(1);
+							if consecutive_health_check_failures < HEALTH_CHECK_FAILURE_THRESHOLD {
+								println!(
+									"LCU health check failed ({}/{}), waiting before refreshing client",
+									consecutive_health_check_failures,
+									HEALTH_CHECK_FAILURE_THRESHOLD
+								);
+								tooltip_connected = true;
+							} else {
+								consecutive_health_check_failures = 0;
+								match LcuClient::connect() {
+									Ok(fresh_client) => {
+										println!("Refreshing LCU client after repeated failed health checks");
+										let mut state = thread_state.lock().await;
+										if state.connected {
+											state.lcu_client = Some(fresh_client);
+											if state.websocket_finished() {
+												state.rebuild_websocket(app_handle.clone());
+											} else {
+												println!("LCU websocket still running; skipping rebuild");
 											}
+										let _ = app_handle.emit("lcu-refresh", true);
+											tooltip_connected = true;
 										}
-										Err(_) => {
-											let mut state = thread_state.lock().await;
-											if state.connected {
-												println!("Lost connection to League client");
-												state.disconnect();
-												tooltip_connected = false;
-												let _ = app_handle.emit("connection", false);
-											}
+									}
+									Err(_) => {
+										let mut state = thread_state.lock().await;
+										if state.connected {
+											println!("Lost connection to League client");
+											state.disconnect();
+											tooltip_connected = false;
+											let _ = app_handle.emit("connection", false);
 										}
 									}
 								}
-						} else {
-								consecutive_health_check_failures = 0;
-							tooltip_connected = true;
-							if websocket_finished {
-								println!("LCU websocket thread finished, rebuilding subscriptions");
-								let mut state = thread_state.lock().await;
-								if state.connected && state.websocket_finished() {
-									state.rebuild_websocket(app_handle.clone());
-										let _ = app_handle.emit("lcu-refresh", true);
-								}
+							}
+					} else {
+						consecutive_health_check_failures = 0;
+						tooltip_connected = true;
+						if websocket_finished {
+							println!("LCU websocket thread finished, rebuilding subscriptions");
+							let mut state = thread_state.lock().await;
+							if state.connected && state.websocket_finished() {
+								state.rebuild_websocket(app_handle.clone());
+									let _ = app_handle.emit("lcu-refresh", true);
 							}
 						}
 					}
+				}
 
-					app_handle
-						.tray_by_id("main")
-						.unwrap()
-						.set_tooltip(Some(format!("crystal | {}", if tooltip_connected { "connected" } else { "disconnected" })))
-						.unwrap();
+				app_handle
+					.tray_by_id("main")
+					.unwrap()
+					.set_tooltip(Some(format!("crystal | {}", if tooltip_connected { "connected" } else { "disconnected" })))
+					.unwrap();
 
-						tokio::time::sleep(Duration::from_secs(5)).await;
+					tokio::time::sleep(Duration::from_secs(5)).await;
 				}
 			});
 
