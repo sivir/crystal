@@ -1,4 +1,4 @@
-import { Bug, Users, Flame, Globe, Home, Palette, Settings, User, UserPen } from "lucide-react";
+import { Bug, Users, Flame, Globe, Home, Palette, Settings, User, UserPen, Star } from "lucide-react";
 import Champions from "@/pages/champions";
 import Lobby from "@/pages/lobby";
 import Profile from "@/pages/profile";
@@ -8,12 +8,18 @@ import TeamBuilder from "@/pages/team_builder";
 import Debug from "@/pages/debug";
 import UserPage from "@/pages/user";
 import SettingsPage from "@/pages/settings";
+import Mastery from "@/pages/mastery";
 
 export const pages: Record<string, { title: string, icon: React.ComponentType, component: React.ComponentType }> = {
 	"home": {
 		title: "Home",
 		icon: Home,
 		component: Champions,
+	},
+	"mastery": {
+		title: "Mastery",
+		icon: Star,
+		component: Mastery,
 	},
 	"lobby": {
 		title: "Lobby",
