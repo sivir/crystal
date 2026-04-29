@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { levels } from "@/lib/utils";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 import {
@@ -52,7 +52,6 @@ export default function Mastery() {
 
 			if (!m7_challenge || !m10_challenge) return null;
 
-			// Available champions for this class
 			const available_ids = m7_challenge.availableIds || [];
 			const champions = available_ids.filter((id: number) => id <= 3000).map((id: number) => {
 				const champ = static_data.champion_map[id];
@@ -77,11 +76,8 @@ export default function Mastery() {
 				return b.mastery_points - a.mastery_points;
 			});
 
-			// Calculate challenge thresholds
 			const get_thresholds = (challenge: any) => {
-				const thresholds = Object.entries(challenge.thresholds)
-					.sort(([, a]: any, [, b]: any) => a.value - b.value)
-					.map(([, v]: any) => v.value);
+				const thresholds = Object.entries(challenge.thresholds).sort(([, a]: any, [, b]: any) => a.value - b.value).map(([, v]: any) => v.value);
 				const current = challenge.currentValue;
 				const next_threshold = thresholds.find(t => t > current) || thresholds[thresholds.length - 1];
 				const master_threshold = challenge.thresholds["MASTER"]?.value || thresholds[thresholds.length - 1];
@@ -91,11 +87,14 @@ export default function Mastery() {
 			const m7_info = get_thresholds(m7_challenge);
 			const m10_info = get_thresholds(m10_challenge);
 
-			// Calculate totals to progress and to master
+			// total points to master
 			const calc_totals = (points_key: 'points_to_m7' | 'points_to_m10', current: number, target: number) => {
 				const needed = Math.max(0, target - current);
 				const eligible = champions.filter(c => c[points_key] > 0).sort((a, b) => a[points_key] - b[points_key]);
-				if (eligible.length < needed) return { possible: false, total: 0, champions_needed: needed, available: eligible.length };
+				// not enough cdhamps for master tier
+				if (eligible.length < needed) {
+					return { possible: false, total: 0, champions_needed: needed, available: eligible.length };
+				}
 				const selected = eligible.slice(0, needed);
 				const total = selected.reduce((sum, c) => sum + c[points_key], 0);
 				return { possible: true, total, selected_ids: selected.map(c => c.id), champions_needed: needed, available: eligible.length };
@@ -153,9 +152,140 @@ export default function Mastery() {
 		});
 	}, [class_data]);
 
+	const optimal_path = useMemo(() => {
+		if (class_data.length === 0) return null;
+
+		const compute_path = (target: 'M7' | 'M10') => {
+			const points_key = target === 'M7' ? 'points_to_m7' as const : 'points_to_m10' as const;
+
+			interface ClassNeed {
+				class_name: string;
+				remaining: number;
+				original_remaining: number;
+				impossible: boolean;
+				eligible_ids: Set<number>;
+				total_in_class: number;
+			}
+
+			const class_needs: ClassNeed[] = [];
+			const champ_map = new Map<number, {
+				data: typeof class_data[0]['champions'][0];
+				class_indices: Set<number>;
+				points: number;
+			}>();
+
+			class_data.forEach((cd, i) => {
+				const info = target === 'M7' ? cd.m7_info : cd.m10_info;
+				const original_remaining = Math.max(0, info.master_threshold - info.current);
+				const eligible = cd.champions.filter(c => c[points_key] > 0);
+				const impossible = eligible.length < original_remaining;
+				const remaining = Math.min(original_remaining, eligible.length);
+
+				class_needs.push({
+					class_name: cd.class_name,
+					remaining,
+					original_remaining,
+					impossible,
+					eligible_ids: new Set(eligible.map(c => c.id)),
+					total_in_class: cd.champions.length,
+				});
+
+				eligible.forEach(c => {
+					if (!champ_map.has(c.id)) {
+						champ_map.set(c.id, { data: c, class_indices: new Set(), points: c[points_key] });
+					}
+					champ_map.get(c.id)!.class_indices.add(i);
+				});
+			});
+
+			const remaining = class_needs.map(cn => cn.remaining);
+			const selected_ids = new Set<number>();
+			const selection_order: number[] = [];
+
+			// add all champs for impossible classes
+			class_needs.forEach((cn) => {
+				if (cn.impossible) {
+					cn.eligible_ids.forEach(id => {
+						if (!selected_ids.has(id)) {
+							selected_ids.add(id);
+							selection_order.push(id);
+							champ_map.get(id)!.class_indices.forEach(ci => {
+								remaining[ci] = Math.max(0, remaining[ci] - 1);
+							});
+						}
+					});
+				}
+			});
+
+			// keep adding champs based on the ratio of class coverage to total points required to level it
+			while (remaining.some(r => r > 0)) {
+				let best_id: number | null = null;
+				let best_score = -Infinity;
+
+				for (const [id, info] of champ_map) {
+					if (selected_ids.has(id)) continue;
+					let coverage = 0;
+					info.class_indices.forEach(ci => { if (remaining[ci] > 0) coverage++; });
+					if (coverage === 0) continue;
+					const score = coverage / Math.max(info.points, 1);
+					if (score > best_score || (score === best_score && best_id !== null && info.points < champ_map.get(best_id)!.points)) {
+						best_score = score;
+						best_id = id;
+					}
+				}
+
+				if (best_id === null) break;
+				selected_ids.add(best_id);
+				selection_order.push(best_id);
+				champ_map.get(best_id)!.class_indices.forEach(ci => {
+					remaining[ci] = Math.max(0, remaining[ci] - 1);
+				});
+			}
+
+			const selected_champs = selection_order.map(id => {
+				const info = champ_map.get(id)!;
+				const classes_contributed = [...info.class_indices].map(ci => class_data[ci].class_name);
+
+				// check if champion has higher mastery than all non-selected champions in its classes
+				let higher_than_all = true;
+				for (const ci of info.class_indices) {
+					const non_selected = class_data[ci].champions.filter(
+						c => c[points_key] > 0 && !selected_ids.has(c.id)
+					);
+					if (non_selected.some(c => c.mastery_points > info.data.mastery_points)) {
+						higher_than_all = false;
+						break;
+					}
+				}
+
+				return {
+					...info.data,
+					classes_contributed,
+					higher_than_all,
+					points_needed: info.points,
+				};
+			});
+
+			const total_points = selected_champs.reduce((sum, c) => sum + c.points_needed, 0);
+			const dual_class_count = selected_champs.filter(c => c.classes_contributed.length > 1).length;
+
+			selected_champs.sort((a, b) => b.mastery_points - a.mastery_points);
+
+			return {
+				champions: selected_champs,
+				total_points,
+				total_champions: selected_champs.length,
+				dual_class_count,
+				class_needs,
+				impossible_classes: class_needs.filter(cn => cn.impossible).map(cn => cn.class_name),
+			};
+		};
+
+		return { m7: compute_path('M7'), m10: compute_path('M10') };
+	}, [class_data]);
+
 	return (
-		<div className="p-6 space-y-6">
-			{/* The two cards moved from champions.tsx */}
+		<div className="p-6 space-y-6"> 
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<Card>
 					<CardHeader>
@@ -248,6 +378,104 @@ export default function Mastery() {
 								})}
 							</div>
 						</ChartContainer>
+ 
+						{optimal_path && (
+							<div className="grid grid-cols-2 gap-1.5">
+								{([['m7', 'M7', optimal_path.m7] as const, ['m10', 'M10', optimal_path.m10] as const]).map(([key, label, path]) => {
+									if (!path || path.champions.length === 0) return null;
+									return (
+										<Dialog key={key}>
+											<DialogTrigger asChild>
+												<div className="p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors group">
+													<div className="flex items-center justify-between">
+														<span className="text-xs font-semibold group-hover:text-foreground transition-colors">Optimal {label} Path</span>
+														<div className="flex items-center gap-1.5">
+															{path.impossible_classes.length > 0 && (
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<Badge variant="outline" className="text-amber-500 border-amber-500/50 gap-0.5 text-[9px] px-1 py-0">
+																			<AlertTriangle className="w-2.5 h-2.5" />
+																			{path.impossible_classes.join(", ")}
+																		</Badge>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>Not enough champions to reach Master tier — all eligible included</p>
+																	</TooltipContent>
+																</Tooltip>
+															)}
+															<span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">→</span>
+														</div>
+													</div>
+													<div className="text-[10px] text-muted-foreground mt-0.5">
+														{path.total_champions} champs{path.dual_class_count > 0 && ` · ${path.dual_class_count} dual-class`}
+													</div>
+													<div className="text-[10px] text-muted-foreground">
+														{path.total_points.toLocaleString()} pts needed
+													</div>
+												</div>
+											</DialogTrigger>
+											<DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+												<DialogHeader>
+													<DialogTitle>Optimal {label} Path to Master Tier</DialogTitle>
+												</DialogHeader>
+												<div className="space-y-4 pt-2">
+													<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+														{path.class_needs.map(cn => (
+															<div key={cn.class_name} className="p-2 border rounded-md text-xs space-y-0.5">
+																<div className="flex items-center justify-between">
+																	<span className="font-medium">{cn.class_name}</span>
+																	{cn.impossible && <AlertTriangle className="w-3 h-3 text-amber-500" />}
+																</div>
+																<div className="text-muted-foreground">
+																	Need {cn.remaining} more{cn.impossible && ` (${cn.original_remaining} needed, only ${cn.total_in_class} exist)`}
+																</div>
+															</div>
+														))}
+													</div>
+
+													<Separator />
+
+													<div className="flex flex-wrap gap-4 text-sm">
+														<div><span className="text-muted-foreground">Champions:</span> <span className="font-medium">{path.total_champions}</span></div>
+														<div><span className="text-muted-foreground">Total pts:</span> <span className="font-medium">{path.total_points.toLocaleString()}</span></div>
+														<div><span className="text-muted-foreground">Dual-class:</span> <span className="font-medium">{path.dual_class_count}</span></div>
+														<div className="flex items-center gap-1">
+															<CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+															<span className="text-muted-foreground">= higher mastery than all non-path champs in class</span>
+														</div>
+													</div>
+
+													<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+														{path.champions.map(champ => (
+															<div key={champ.id} className={`p-2 rounded-md border bg-card flex items-center gap-2 ${champ.higher_than_all ? 'border-green-500/30' : 'border-amber-500/30'}`}>
+																<ChampionMasteryIcon data={champ.mastery} className="w-8 h-8 shrink-0" />
+																<div className="flex-1 min-w-0">
+																	<div className="flex items-center gap-1">
+																		<span className="font-medium truncate text-xs">{champ.name}</span>
+																		{champ.higher_than_all
+																			? <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+																			: <Tooltip><TooltipTrigger asChild><AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 cursor-help" /></TooltipTrigger><TooltipContent><p>A non-path champion in the same class has higher mastery</p></TooltipContent></Tooltip>
+																		}
+																	</div>
+																	<div className="flex items-center gap-1 mt-0.5">
+																		{champ.classes_contributed.map(cls => (
+																			<Badge key={cls} variant="outline" className="text-[8px] px-1 py-0 leading-tight">{cls}</Badge>
+																		))}
+																	</div>
+																	<div className="text-[10px] text-primary font-medium font-mono mt-0.5">
+																		{champ.points_needed.toLocaleString()} pts to {label}
+																	</div>
+																</div>
+															</div>
+														))}
+													</div>
+												</div>
+											</DialogContent>
+										</Dialog>
+									);
+								})}
+							</div>
+						)}
 					</CardContent>
 				</Card>
 				
@@ -394,16 +622,17 @@ export default function Mastery() {
 				</Card>
 			</div>
 
+
 			{/* Class Details */}
 			<div className="space-y-8">
-				{class_data.map((data, index) => (
+				{class_data.map((data) => (
 					<Card key={data.class_name}>
 						<CardHeader className="py-4 px-5">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
 									<CardTitle className="text-base flex items-center gap-2">
-										{data.class_name} Class
-										<span className="text-xs text-muted-foreground font-normal">({data.champions.length})</span>
+										{data.class_name}
+										<span className="text-xs text-muted-foreground font-normal">({data.champions.length} champions / {data.m10_info.master_threshold} needed)</span>
 									</CardTitle>
 									<div className="flex gap-1">
 										<Button
