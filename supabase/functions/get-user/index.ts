@@ -1,4 +1,4 @@
-import { cors_headers, get_user, update_riot_data, riot_api_key, supabase_secret } from '../_shared/update_db.ts';
+import { cors_headers, get_user, update_riot_data, update_db_riot_id, riot_api_key, supabase_secret } from '../_shared/update_db.ts';
 
 Deno.serve(async (req) => {
 	// allow calling from browser
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 		console.log("id: ", id, " res: ", res);
 		// if not, update db with riot data
 		if (res.length === 0) {
-			const data = await update_riot_data(puuid, region);
+			const data = await update_riot_data(puuid, region, riot_id);
 			return Response.json({
 				riot_data: data["challenge"],
 				mastery_data: data["mastery"],
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 			const diff = now.getTime() - last_updated.getTime();
 			// if it's been 10 minutes, update it
 			if (diff > 10 * 60 * 1000) {
-				const data = await update_riot_data(puuid, region);
+				const data = await update_riot_data(puuid, region, riot_id);
 				return Response.json({
 					riot_data: data["challenge"],
 					mastery_data: data["mastery"],
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 					headers: cors_headers
 				});
 			} else {
-				// otherwise, return it
+				await update_db_riot_id(puuid, riot_id);
 				return Response.json({
 					riot_data: res[0].riot_data,
 					mastery_data: res[0].mastery_data,

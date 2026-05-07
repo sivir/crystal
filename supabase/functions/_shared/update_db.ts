@@ -28,26 +28,26 @@ const region_to_platform : { [key: string]: string } = {
 	"vn": "vn2"
 }
 
-async function update_riot_data(id: string, region: string) {
+async function update_riot_data(id: string, region: string, riot_id: string) {
 	console.log("update_riot_data id: ", id, " region: ", region);
 	const challenge_response = await fetch(`https://${region_to_platform[region]}.api.riotgames.com/lol/challenges/v1/player-data/${id}?api_key=${riot_api_key}`);
 	const challenge_data = await challenge_response.json();
 	const mastery_response = await fetch(`https://${region_to_platform[region]}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${id}?api_key=${riot_api_key}`);
 	const mastery_data = await mastery_response.json();
-	await update_db_riot_data(id, challenge_data, mastery_data);
+	await update_db_riot_data(id, challenge_data, mastery_data, riot_id);
 	return {
 		"challenge": challenge_data,
 		"mastery": mastery_data
 	};
 }
 
-async function update_db_riot_data(id: string, challenge_data: any, mastery_data: any) {
+async function update_db_riot_data(id: string, challenge_data: any, mastery_data: any, riot_id: string) {
 	const connection = await pool.connect();
 	const time = new Date();
-	await connection.queryObject`INSERT INTO users (id, riot_data, last_update_riot, mastery_data)
-                                 VALUES (${id}, ${challenge_data}, ${time}, ${mastery_data}) ON CONFLICT (id) DO
+	await connection.queryObject`INSERT INTO users (id, riot_data, last_update_riot, mastery_data, riot_id)
+                                 VALUES (${id}, ${challenge_data}, ${time}, ${mastery_data}, ${riot_id}) ON CONFLICT (id) DO
     UPDATE
-        SET (riot_data, last_update_riot, mastery_data) = (${challenge_data}, ${time}, ${mastery_data})`;
+        SET (riot_data, last_update_riot, mastery_data, riot_id) = (${challenge_data}, ${time}, ${mastery_data}, ${riot_id})`;
 	connection.release();
 }
 
@@ -55,7 +55,7 @@ async function update_db_lcu_data(id: string, data: any) {
 	const connection = await pool.connect();
 	const user = await get_user(id);
 	if (user.length === 0) {
-		await update_riot_data(id, "na");
+	await update_riot_data(id, "na", "");
 	}
 	const time = new Date();
 	// update lcu data and time for user without inserting
@@ -73,4 +73,10 @@ async function get_user(id: string): Promise<any[]> {
 	return res.rows;
 }
 
-export { cors_headers, update_db_riot_data, get_user, update_riot_data, update_db_lcu_data, riot_api_key, supabase_secret };
+async function update_db_riot_id(id: string, riot_id: string) {
+	const connection = await pool.connect();
+	await connection.queryObject`UPDATE users SET riot_id = ${riot_id} WHERE id = ${id}`;
+	connection.release();
+}
+
+export { cors_headers, update_db_riot_data, get_user, update_riot_data, update_db_lcu_data, update_db_riot_id, riot_api_key, supabase_secret };
