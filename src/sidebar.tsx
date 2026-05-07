@@ -1,29 +1,10 @@
 import { app } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import { useStaticData, useSessionData, page_name } from "@/data_context.tsx";
-import { pages } from "@/pages_config"
-import { refresh_data } from "@/App.tsx";
-import { getVersion } from "@tauri-apps/api/app";
+import { pages, page_groups, PageGroup } from "@/pages_config"
 
-import { Moon, Sun, RefreshCcw } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { useTheme } from "@/theme-provider.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Progress } from "@/components/ui/progress.tsx";
-import { useLoading } from "./lib/loading_state";
-
-function ModeToggle() {
-	const { setTheme, theme } = useTheme()
-
-	return (
-		<Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-			<Sun className="h-2 w-2 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-			<Moon className="absolute h-2 w-2 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-			<span className="sr-only">Toggle theme</span>
-		</Button>
-	)
-}
 
 async function app_icon(): Promise<string> {
 	const icon = await app.defaultWindowIcon();
@@ -51,17 +32,19 @@ async function app_icon(): Promise<string> {
 export function AppSidebar() {
 	const { static_data, setStaticData } = useStaticData();
 	const { session_data } = useSessionData();
-	const { is_loading, loading_progress } = useLoading();
 	const [image_src, set_image_src] = useState<string>("");
-	const [version, setVersion] = useState<string>("");
 
 	useEffect(() => {
 		app_icon().then(x => set_image_src(x));
 	}, []);
 
-	useEffect(() => {
-		getVersion().then(x => setVersion(x));
-	}, []);
+	// Group pages by their group property
+	const grouped_pages = Object.entries(pages).reduce<Record<PageGroup, [string, typeof pages[string]][]>>((acc, entry) => {
+		const group = entry[1].group;
+		if (!acc[group]) acc[group] = [];
+		acc[group].push(entry);
+		return acc;
+	}, {} as Record<PageGroup, [string, typeof pages[string]][]>);
 
 	return (
 		<Sidebar variant="inset">
@@ -73,7 +56,6 @@ export function AppSidebar() {
 								<img src={image_src} alt="icon" />
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-semibold">crystal</span>
-									<span className="truncate text-xs">v{version}</span>
 								</div>
 							</a>
 						</SidebarMenuButton>
@@ -81,40 +63,33 @@ export function AppSidebar() {
 				</SidebarMenu>
 			</SidebarHeader>
 			<SidebarContent>
-				<SidebarGroup>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							{Object.entries(pages).map(([key, item]) => (
-								<SidebarMenuItem key={key}>
-									<SidebarMenuButton asChild onClick={() => setStaticData(prev => ({ ...prev, page: key as page_name }))}>
-										<a href={"#"}>
-											<item.icon />
-											<span>{item.title}</span>
-											{key == "lobby" && session_data.gameflow_session?.phase == "ChampSelect" && (
-												<Badge className="bg-green-400">In Lobby</Badge>
-											)}
-										</a>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
+				{(Object.keys(page_groups) as PageGroup[]).map(group_key => (
+					<SidebarGroup key={group_key}>
+						<SidebarGroupLabel>{page_groups[group_key]}</SidebarGroupLabel>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								{(grouped_pages[group_key] || []).map(([key, item]) => (
+									<SidebarMenuItem key={key}>
+										<SidebarMenuButton
+											asChild
+											isActive={static_data.page === key}
+											onClick={() => setStaticData(prev => ({ ...prev, page: key as page_name }))}
+										>
+											<a href={"#"}>
+												<item.icon />
+												<span>{item.title}</span>
+												{key == "lobby" && session_data.gameflow_session?.phase == "ChampSelect" && (
+													<Badge className="bg-green-400">In Lobby</Badge>
+												)}
+											</a>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				))}
 			</SidebarContent>
-			<SidebarFooter className="flex items-center flex-row gap-1 relative">
-				{is_loading && (
-					<div className="w-full px-2 mb-2 absolute bottom-12 left-0">
-						<Progress value={loading_progress} className="h-1" />
-					</div>
-				)}
-				<ModeToggle />
-				<Button variant="outline" size="icon" onClick={() => refresh_data(setStaticData, static_data)}>
-					<RefreshCcw className={`h-2 w-2 ${is_loading ? "animate-spin" : ""}`} />
-				</Button>
-				<Badge variant={static_data.connected ? "success" : "destructive"}>
-					{static_data.connected ? "connected" : "disconnected"}
-				</Badge>
-			</SidebarFooter>
 		</Sidebar>
 	)
 }

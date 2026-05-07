@@ -6,8 +6,8 @@ import { pages } from "@/pages_config"
 
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/sidebar";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { StatusBar } from "@/status_bar";
 import { X, Square, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -28,35 +28,30 @@ export default function Layout({ children }: { children: ReactElement }) {
 		<SidebarProvider className="overflow-hidden">
 			<AppSidebar />
 			<SidebarInset className="overflow-hidden">
-				<main className="flex flex-col h-full relative">
-					<header data-tauri-drag-region="true" className="absolute top-0 left-0 right-0 flex h-16 items-center justify-between px-4 bg-background z-10">
+				<div className="absolute inset-0 flex flex-col">
+					<header data-tauri-drag-region="true" className="flex h-12 items-center justify-between px-4 bg-background/80 backdrop-blur-sm shrink-0 z-10">
 						<div className="flex items-center gap-2">
 							<SidebarTrigger className="-ml-1" />
 							<Separator orientation="vertical" className="mr-2 h-4" />
-							<Breadcrumb>
-								<BreadcrumbList>
-									<BreadcrumbItem>
-										<BreadcrumbPage>{pages[static_data.page].title}</BreadcrumbPage>
-									</BreadcrumbItem>
-								</BreadcrumbList>
-							</Breadcrumb>
+							<span className="text-sm font-medium">{pages[static_data.page].title}</span>
 						</div>
-						<div className="flex items-center gap-2">
-							<Button variant="ghost" className="rounded-full size-6 p-2" onClick={() => getCurrentWindow().minimize()}>
-								<Minus />
+						<div className="flex items-center gap-1">
+							<Button variant="ghost" className="rounded-full size-6 p-1" onClick={() => getCurrentWindow().minimize()}>
+								<Minus className="h-3.5 w-3.5" />
 							</Button>
-							<Button variant="ghost" className="rounded-full size-6 p-2" onClick={() => getCurrentWindow().toggleMaximize()}>
-								<Square />
+							<Button variant="ghost" className="rounded-full size-6 p-1" onClick={() => getCurrentWindow().toggleMaximize()}>
+								<Square className="h-3 w-3" />
 							</Button>
-							<Button variant="ghost" className="rounded-full size-6 p-2" onClick={handle_close}>
-								<X />
+							<Button variant="ghost" className="rounded-full size-6 p-1 hover:bg-red-500/10 hover:text-red-500" onClick={handle_close}>
+								<X className="h-3.5 w-3.5" />
 							</Button>
 						</div>
 					</header>
-					<div className="absolute top-16 bottom-0 left-0 right-0 overflow-y-auto overflow-x-hidden">
+					<main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
 						{children}
-					</div>
-				</main>
+					</main>
+					<StatusBar />
+				</div>
 			</SidebarInset>
 		</SidebarProvider>
 	);
