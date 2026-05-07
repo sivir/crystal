@@ -20,15 +20,12 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 
 	const primary_promises: Promise<unknown>[] = [];
 	let completed_tasks = 0;
-	const champion_ids = Object.keys(static_data.champion_map);
-	const total_tasks = 3 + champion_ids.length;
+	const total_tasks = 3;
 
 	const update_progress = () => {
 		completed_tasks++;
 		setLoading(true, (completed_tasks / total_tasks) * 100);
 	};
-
-	setStaticData(prev => ({ ...prev, eternals_map: new Map() }));
 
 	primary_promises.push(
 		lcu_get_request<APILCUChallengeMap>("/lol-challenges/v1/challenges/local-player")
@@ -123,7 +120,34 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 			.finally(update_progress)
 	);
 
-	const eternal_promises = () => Promise.all(
+	Promise.all(primary_promises).then(() => {
+		setLoading(false, 100);
+	}).catch((error) => {
+		console.error("Error during refresh_data:", error);
+		setLoading(false, 0);
+	});
+}
+
+export function refresh_eternals(setStaticData: React.Dispatch<React.SetStateAction<StaticData>>, static_data: StaticData) {
+	if (!static_data.connected) {
+		console.log("not connected, skipping eternals refresh");
+		return;
+	}
+
+	const champion_ids = Object.keys(static_data.champion_map);
+	if (champion_ids.length === 0) {
+		console.log("no champion map, skipping eternals refresh");
+		return;
+	}
+
+	console.log("refreshing eternals");
+	setLoading(true, 0);
+	setStaticData(prev => ({ ...prev, eternals_map: new Map() }));
+
+	let completed = 0;
+	const total = champion_ids.length;
+
+	Promise.all(
 		champion_ids.map(champion_id =>
 			lcu_get_request<APIEternalsData>(`/lol-statstones/v2/player-statstones-self/${champion_id}`)
 				.then(eternals => {
@@ -137,14 +161,15 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 					}
 				})
 				.catch(error => console.error(`Error refreshing eternals for champion ${champion_id}:`, error))
-				.finally(update_progress)
+				.finally(() => {
+					completed++;
+					setLoading(true, (completed / total) * 100);
+				})
 		)
-	);
-
-	Promise.all(primary_promises).then(() => eternal_promises()).then(() => {
+	).then(() => {
 		setLoading(false, 100);
 	}).catch((error) => {
-		console.error("Error during refresh_data:", error);
+		console.error("Error during refresh_eternals:", error);
 		setLoading(false, 0);
 	});
 }
