@@ -710,7 +710,7 @@ export default function Mastery() {
 									const is_m10_path = m10_path_ids.has(champ.id);
 
 									return (
-										<div key={champ.id} className="p-2 rounded-md border bg-card text-card-foreground flex flex-col gap-1.5">
+										<div key={champ.id} className={`p-2 rounded-md border bg-card text-card-foreground flex flex-col gap-1.5 ${is_m10_path ? 'border-purple-500/50' : ''}`}>
 											<div className="flex items-center gap-2">
 												<ChampionMasteryIcon data={champ.mastery} className="w-8 h-8" />
 												<div className="flex-1 min-w-0">
