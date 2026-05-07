@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useMemo } from "react";
 
-export type page_name = "home" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug" | "user";
+export type page_name = "home" | "mastery" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug" | "user";
 
 export type APIMasteryDataEntry = {
 	championId: number;
