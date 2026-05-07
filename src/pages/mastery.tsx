@@ -284,6 +284,11 @@ export default function Mastery() {
 		return { m7: compute_path('M7'), m10: compute_path('M10') };
 	}, [class_data]);
 
+	const m10_path_ids = useMemo(
+		() => new Set(optimal_path?.m10.champions.map(c => c.id) ?? []),
+		[optimal_path]
+	);
+
 	return (
 		<div className="p-6 space-y-6"> 
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -702,38 +707,32 @@ export default function Mastery() {
 									const is_m10_progress = data.m10_progress.selected_ids?.includes(champ.id);
 									const is_m10_master = data.m10_master.selected_ids?.includes(champ.id);
 
+									const is_m10_path = m10_path_ids.has(champ.id);
+
 									return (
 										<div key={champ.id} className="p-2 rounded-md border bg-card text-card-foreground flex flex-col gap-1.5">
 											<div className="flex items-center gap-2">
 												<ChampionMasteryIcon data={champ.mastery} className="w-8 h-8" />
 												<div className="flex-1 min-w-0">
-													<div className="flex items-center gap-1.5">
-														<div className="font-medium truncate text-xs">{champ.name}</div>
-														<div className="flex items-center gap-1 ml-auto">
-															{(() => {
-																const m7_done = champ.mastery_level >= 7;
-																const m7_color = m7_done ? "bg-green-500 text-white border-transparent" : is_m7_progress ? "bg-orange-500 text-white border-transparent" : is_m7_master ? "bg-red-500 text-white border-transparent" : "";
-																const m7_tooltip = m7_done ? "Already Mastery 7+" : is_m7_progress ? `Needed for next tier (${champ.points_to_m7.toLocaleString()} pts)` : is_m7_master ? `Needed for Master tier (${champ.points_to_m7.toLocaleString()} pts)` : `Not required (${champ.points_to_m7 > 0 ? champ.points_to_m7.toLocaleString() + ' pts to M7' : 'Done'})`;
-																const m10_done = champ.mastery_level >= 10;
-																const m10_color = m10_done ? "bg-green-500 text-white border-transparent" : is_m10_progress ? "bg-orange-500 text-white border-transparent" : is_m10_master ? "bg-red-500 text-white border-transparent" : "";
-																const m10_tooltip = m10_done ? "Already Mastery 10+" : is_m10_progress ? `Needed for next tier (${champ.points_to_m10.toLocaleString()} pts)` : is_m10_master ? `Needed for Master tier (${champ.points_to_m10.toLocaleString()} pts)` : `Not required (${champ.points_to_m10 > 0 ? champ.points_to_m10.toLocaleString() + ' pts to M10' : 'Done'})`;
-																return (
-																	<>
-																		<Tooltip><TooltipTrigger asChild><Badge variant="outline" className={`text-[9px] px-1 py-0 leading-tight cursor-help ${m7_color}`}>M7</Badge></TooltipTrigger><TooltipContent><p>{m7_tooltip}</p></TooltipContent></Tooltip>
-																		<Tooltip><TooltipTrigger asChild><Badge variant="outline" className={`text-[9px] px-1 py-0 leading-tight cursor-help ${m10_color}`}>M10</Badge></TooltipTrigger><TooltipContent><p>{m10_tooltip}</p></TooltipContent></Tooltip>
-																	</>
-																);
-															})()}
-														</div>
-													</div>
-													<div className="flex items-center gap-1.5 mt-0.5">
-														<span className="text-[10px] text-muted-foreground font-mono">Lvl {champ.mastery_level}</span>
-														<div className="flex-1">
-															<Progress
-																value={champ.mastery.championPointsUntilNextLevel === 0 ? 100 : (champ.mastery.championPointsSinceLastLevel / (champ.mastery.championPointsSinceLastLevel + champ.mastery.championPointsUntilNextLevel)) * 100}
-																className="h-1 bg-muted"
-															/>
-														</div>
+													<div className="font-medium truncate text-xs">{champ.name}</div>
+													<div className="flex items-center gap-1 mt-0.5">
+														{(() => {
+															const m7_done = champ.mastery_level >= 7;
+															const m7_color = m7_done ? "bg-green-500 text-white border-transparent" : is_m7_progress ? "bg-orange-500 text-white border-transparent" : is_m7_master ? "bg-red-500 text-white border-transparent" : "";
+															const m7_tooltip = m7_done ? "Already Mastery 7+" : is_m7_progress ? `Needed for next tier (${champ.points_to_m7.toLocaleString()} pts)` : is_m7_master ? `Needed for Master tier (${champ.points_to_m7.toLocaleString()} pts)` : `Not required (${champ.points_to_m7 > 0 ? champ.points_to_m7.toLocaleString() + ' pts to M7' : 'Done'})`;
+															const m10_done = champ.mastery_level >= 10;
+															const m10_color = m10_done ? "bg-green-500 text-white border-transparent" : is_m10_progress ? "bg-orange-500 text-white border-transparent" : is_m10_master ? "bg-red-500 text-white border-transparent" : "";
+															const m10_tooltip = m10_done ? "Already Mastery 10+" : is_m10_progress ? `Needed for next tier (${champ.points_to_m10.toLocaleString()} pts)` : is_m10_master ? `Needed for Master tier (${champ.points_to_m10.toLocaleString()} pts)` : `Not required (${champ.points_to_m10 > 0 ? champ.points_to_m10.toLocaleString() + ' pts to M10' : 'Done'})`;
+															const path_color = is_m10_path ? "bg-purple-500 text-white border-transparent" : "";
+															const path_tooltip = is_m10_path ? `On M10 optimal path (${champ.points_to_m10.toLocaleString()} pts to M10)` : "Not on M10 optimal path";
+															return (
+																<>
+																	<Tooltip><TooltipTrigger asChild><Badge variant="outline" className={`text-[9px] px-1 py-0 leading-tight cursor-help ${m7_color}`}>M7</Badge></TooltipTrigger><TooltipContent><p>{m7_tooltip}</p></TooltipContent></Tooltip>
+																	<Tooltip><TooltipTrigger asChild><Badge variant="outline" className={`text-[9px] px-1 py-0 leading-tight cursor-help ${m10_color}`}>M10</Badge></TooltipTrigger><TooltipContent><p>{m10_tooltip}</p></TooltipContent></Tooltip>
+																	<Tooltip><TooltipTrigger asChild><Badge variant="outline" className={`text-[9px] px-1 py-0 leading-tight cursor-help ${path_color}`}>Path</Badge></TooltipTrigger><TooltipContent><p>{path_tooltip}</p></TooltipContent></Tooltip>
+																</>
+															);
+														})()}
 													</div>
 												</div>
 											</div>
