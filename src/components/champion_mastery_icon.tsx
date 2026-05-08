@@ -2,6 +2,7 @@ import { cn, mastery_icon_color } from "@/lib/utils";
 import { APIMasteryDataEntry } from "@/data_context";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { ChampionDetailCard } from "@/components/champion_detail_card";
+import { useOptimalPathIds } from "@/hooks/use-optimal-path";
 
 interface ChampionMasteryIconProps {
 	data: APIMasteryDataEntry;
@@ -11,12 +12,14 @@ interface ChampionMasteryIconProps {
 export function ChampionMasteryIcon({ data, className }: ChampionMasteryIconProps) {
 	const totalPointsNeeded = data.championPointsSinceLastLevel + Math.max(0, data.championPointsUntilNextLevel);
 	const progress = totalPointsNeeded > 0 ? (data.championPointsSinceLastLevel / totalPointsNeeded) * 100 : 100;
+	const optimal_path_ids = useOptimalPathIds();
+	const is_on_path = optimal_path_ids.has(data.championId);
 
 	return (
 		<HoverCard openDelay={150} closeDelay={0}>
 			<HoverCardTrigger asChild>
 				<div className={cn("relative inline-block w-16 h-16 cursor-pointer", className)}>
-					<div className="relative overflow-hidden rounded-md w-full h-full">
+					<div className={cn("relative overflow-hidden rounded-md w-full h-full", is_on_path && "ring-2 ring-purple-500")}>
 						<img
 							src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${data.championId}.png`}
 							alt={`Champion ${data.championId}`}

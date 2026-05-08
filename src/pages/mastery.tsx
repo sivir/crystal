@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { default_mastery_data, useStaticData } from "@/data_context";
+import { useStaticData } from "@/data_context";
 import { challenge_icon, classes, get_level_color, get_progress_color } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -13,6 +13,7 @@ import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useOptimalPath } from "@/hooks/use-optimal-path";
 
 import {
 	M7_CHALLENGES as m7_challenges,
@@ -20,19 +21,9 @@ import {
 	MASTERY_HEADLINE_CHALLENGES,
 } from "@/lib/challenges";
 
-const mastery_per_level = [0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000]; // mastery to get to the next level from this level
-
-function points_to_target_level(current_level: number, current_points_until_next: number, target_level: number) {
-	if (current_level >= target_level) return 0;
-	let points = current_points_until_next;
-	for (let l = current_level + 1; l < target_level; l++) {
-		points += mastery_per_level[l] || 11000;
-	}
-	return points;
-}
-
 export default function Mastery() {
 	const { static_data, has_lcu_data } = useStaticData();
+	const { class_data, optimal_path, m10_path_ids } = useOptimalPath();
 	const [hide_filters, set_hide_filters] = useState<Record<string, { hide_m7: boolean; hide_m10: boolean }>>(() => {
 		const initial: Record<string, { hide_m7: boolean; hide_m10: boolean }> = {};
 		for (const cls of classes) {
@@ -40,92 +31,6 @@ export default function Mastery() {
 		}
 		return initial;
 	}); 
-
-	const class_data = useMemo(() => {
-		if (!has_lcu_data) return [];
-		
-		const result = classes.map((class_name, index) => {
-			const m7_id = m7_challenges[index];
-			const m10_id = m10_challenges[index];
-			const m7_challenge = static_data.lcu_data[m7_id];
-			const m10_challenge = static_data.lcu_data[m10_id];
-
-			if (!m7_challenge || !m10_challenge) return null;
-
-			const available_ids = m7_challenge.availableIds || [];
-			const champions = available_ids.filter((id: number) => id <= 3000).map((id: number) => {
-				const champ = static_data.champion_map[id];
-				const mastery = static_data.mastery_data.find(m => m.championId === id) || { ...default_mastery_data, championId: id };
-				
-				const points_to_m7 = points_to_target_level(mastery.championLevel, mastery.championPointsUntilNextLevel, 7);
-				const points_to_m10 = points_to_target_level(mastery.championLevel, mastery.championPointsUntilNextLevel, 10);
-
-				return {
-					id,
-					name: champ?.name || `Champion ${id}`,
-					mastery_level: mastery.championLevel,
-					mastery_points: mastery.championPoints,
-					points_to_m7,
-					points_to_m10,
-					mastery
-				};
-			});
-
-			champions.sort((a, b) => {
-				if (a.mastery_level !== b.mastery_level) return b.mastery_level - a.mastery_level;
-				return b.mastery_points - a.mastery_points;
-			});
-
-			const get_thresholds = (challenge: any) => {
-				const thresholds = Object.entries(challenge.thresholds).sort(([, a]: any, [, b]: any) => a.value - b.value).map(([, v]: any) => v.value);
-				const current = challenge.currentValue;
-				const next_threshold = thresholds.find(t => t > current) || thresholds[thresholds.length - 1];
-				const master_threshold = challenge.thresholds["MASTER"]?.value || thresholds[thresholds.length - 1];
-				return { current, next_threshold, master_threshold };
-			};
-
-			const m7_info = get_thresholds(m7_challenge);
-			const m10_info = get_thresholds(m10_challenge);
-
-			// total points to master
-			const calc_totals = (points_key: 'points_to_m7' | 'points_to_m10', current: number, target: number) => {
-				const needed = Math.max(0, target - current);
-				const eligible = champions.filter(c => c[points_key] > 0).sort((a, b) => a[points_key] - b[points_key]);
-				// not enough cdhamps for master tier
-				if (eligible.length < needed) {
-					return { possible: false, total: 0, champions_needed: needed, available: eligible.length };
-				}
-				const selected = eligible.slice(0, needed);
-				const total = selected.reduce((sum, c) => sum + c[points_key], 0);
-				return { possible: true, total, selected_ids: selected.map(c => c.id), champions_needed: needed, available: eligible.length };
-			};
-
-			const m7_progress = calc_totals('points_to_m7', m7_info.current, m7_info.next_threshold);
-			const m7_master = calc_totals('points_to_m7', m7_info.current, m7_info.master_threshold);
-			const m10_progress = calc_totals('points_to_m10', m10_info.current, m10_info.next_threshold);
-			const m10_master = calc_totals('points_to_m10', m10_info.current, m10_info.master_threshold);
-
-			const m7_closest = m7_progress.possible ? m7_progress.total : Infinity;
-			const m10_closest = m10_progress.possible ? m10_progress.total : Infinity;
-			const closest_type = m7_closest <= m10_closest ? 'M7' as const : 'M10' as const;
-
-			return {
-				class_name,
-				m7_challenge,
-				m10_challenge,
-				m7_info,
-				m10_info,
-				m7_progress,
-				m7_master,
-				m10_progress,
-				m10_master,
-				champions,
-				closest_type
-			};
-		}).filter(x => x !== null);
-
-		return result;
-	}, [has_lcu_data, static_data]);
 
 	const all_progress_items = useMemo(() => {
 		return class_data.flatMap(data => [
@@ -151,143 +56,6 @@ export default function Mastery() {
 			return a_val - b_val;
 		});
 	}, [class_data]);
-
-	const optimal_path = useMemo(() => {
-		if (class_data.length === 0) return null;
-
-		const compute_path = (target: 'M7' | 'M10') => {
-			const points_key = target === 'M7' ? 'points_to_m7' as const : 'points_to_m10' as const;
-
-			interface ClassNeed {
-				class_name: string;
-				remaining: number;
-				original_remaining: number;
-				impossible: boolean;
-				eligible_ids: Set<number>;
-				total_in_class: number;
-			}
-
-			const class_needs: ClassNeed[] = [];
-			const champ_map = new Map<number, {
-				data: typeof class_data[0]['champions'][0];
-				class_indices: Set<number>;
-				points: number;
-			}>();
-
-			class_data.forEach((cd, i) => {
-				const info = target === 'M7' ? cd.m7_info : cd.m10_info;
-				const original_remaining = Math.max(0, info.master_threshold - info.current);
-				const eligible = cd.champions.filter(c => c[points_key] > 0);
-				const impossible = eligible.length < original_remaining;
-				const remaining = Math.min(original_remaining, eligible.length);
-
-				class_needs.push({
-					class_name: cd.class_name,
-					remaining,
-					original_remaining,
-					impossible,
-					eligible_ids: new Set(eligible.map(c => c.id)),
-					total_in_class: cd.champions.length,
-				});
-
-				eligible.forEach(c => {
-					if (!champ_map.has(c.id)) {
-						champ_map.set(c.id, { data: c, class_indices: new Set(), points: c[points_key] });
-					}
-					champ_map.get(c.id)!.class_indices.add(i);
-				});
-			});
-
-			const remaining = class_needs.map(cn => cn.remaining);
-			const selected_ids = new Set<number>();
-			const selection_order: number[] = [];
-
-			// add all champs for impossible classes
-			class_needs.forEach((cn) => {
-				if (cn.impossible) {
-					cn.eligible_ids.forEach(id => {
-						if (!selected_ids.has(id)) {
-							selected_ids.add(id);
-							selection_order.push(id);
-							champ_map.get(id)!.class_indices.forEach(ci => {
-								remaining[ci] = Math.max(0, remaining[ci] - 1);
-							});
-						}
-					});
-				}
-			});
-
-			// keep adding champs based on the ratio of class coverage to total points required to level it
-			while (remaining.some(r => r > 0)) {
-				let best_id: number | null = null;
-				let best_score = -Infinity;
-
-				for (const [id, info] of champ_map) {
-					if (selected_ids.has(id)) continue;
-					let coverage = 0;
-					info.class_indices.forEach(ci => { if (remaining[ci] > 0) coverage++; });
-					if (coverage === 0) continue;
-					const score = coverage / Math.max(info.points, 1);
-					if (score > best_score || (score === best_score && best_id !== null && info.points < champ_map.get(best_id)!.points)) {
-						best_score = score;
-						best_id = id;
-					}
-				}
-
-				if (best_id === null) break;
-				selected_ids.add(best_id);
-				selection_order.push(best_id);
-				champ_map.get(best_id)!.class_indices.forEach(ci => {
-					remaining[ci] = Math.max(0, remaining[ci] - 1);
-				});
-			}
-
-			const selected_champs = selection_order.map(id => {
-				const info = champ_map.get(id)!;
-				const classes_contributed = [...info.class_indices].map(ci => class_data[ci].class_name);
-
-				// check if champion has higher mastery than all non-selected champions in its classes
-				let higher_than_all = true;
-				for (const ci of info.class_indices) {
-					const non_selected = class_data[ci].champions.filter(
-						c => c[points_key] > 0 && !selected_ids.has(c.id)
-					);
-					if (non_selected.some(c => c.mastery_points > info.data.mastery_points)) {
-						higher_than_all = false;
-						break;
-					}
-				}
-
-				return {
-					...info.data,
-					classes_contributed,
-					higher_than_all,
-					points_needed: info.points,
-				};
-			});
-
-			const total_points = selected_champs.reduce((sum, c) => sum + c.points_needed, 0);
-			const dual_class_count = selected_champs.filter(c => c.classes_contributed.length > 1).length;
-
-			selected_champs.sort((a, b) => b.mastery_points - a.mastery_points);
-
-			return {
-				champions: selected_champs,
-				total_points,
-				total_champions: selected_champs.length,
-				dual_class_count,
-				class_needs,
-				impossible_classes: class_needs.filter(cn => cn.impossible).map(cn => cn.class_name),
-			};
-		};
-
-		return { m7: compute_path('M7'), m10: compute_path('M10') };
-	}, [class_data]);
-
-	const m10_path_ids = useMemo(
-		() => new Set(optimal_path?.m10.champions.map(c => c.id) ?? []),
-		[optimal_path]
-	);
 
 	return (
 		<div className="p-6 space-y-6"> 
