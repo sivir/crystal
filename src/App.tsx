@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry } from "@/data_context.tsx";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 import { setLoading } from "@/lib/loading_state.ts";
@@ -177,9 +177,18 @@ export function refresh_eternals(setStaticData: React.Dispatch<React.SetStateAct
 function refresh_session_data(setSessionData: React.Dispatch<React.SetStateAction<{
 	champ_select_session: APIChampSelectSession | null;
 	gameflow_session: APIGameflowSession | null;
+	lobby_member_puuids: string[];
 }>>) {
 	refresh_champ_select_session(setSessionData);
+	refresh_lobby_members(setSessionData);
+	refresh_gameflow_session(setSessionData);
+}
 
+function refresh_gameflow_session(setSessionData: React.Dispatch<React.SetStateAction<{
+	champ_select_session: APIChampSelectSession | null;
+	gameflow_session: APIGameflowSession | null;
+	lobby_member_puuids: string[];
+}>>) {
 	lcu_get_request<APIGameflowSession>("/lol-gameflow/v1/session")
 		.then(gameflow_session => setSessionData(prev => ({ ...prev, gameflow_session })))
 		.catch(() => setSessionData(prev => ({ ...prev, gameflow_session: null })));
@@ -188,10 +197,21 @@ function refresh_session_data(setSessionData: React.Dispatch<React.SetStateActio
 function refresh_champ_select_session(setSessionData: React.Dispatch<React.SetStateAction<{
 	champ_select_session: APIChampSelectSession | null;
 	gameflow_session: APIGameflowSession | null;
+	lobby_member_puuids: string[];
 }>>) {
 	lcu_get_request<APIChampSelectSession>("/lol-champ-select/v1/session")
 		.then(champ_select_session => setSessionData(prev => ({ ...prev, champ_select_session })))
 		.catch(() => setSessionData(prev => ({ ...prev, champ_select_session: null })));
+}
+
+function refresh_lobby_members(setSessionData: React.Dispatch<React.SetStateAction<{
+	champ_select_session: APIChampSelectSession | null;
+	gameflow_session: APIGameflowSession | null;
+	lobby_member_puuids: string[];
+}>>) {
+	lcu_get_request<APILobbyMember[]>("/lol-lobby/v2/lobby/members")
+		.then(members => setSessionData(prev => ({ ...prev, lobby_member_puuids: (members ?? []).map(member => member.puuid) })))
+		.catch(() => setSessionData(prev => ({ ...prev, lobby_member_puuids: [] })));
 }
 
 export default function App() {
@@ -203,6 +223,7 @@ export default function App() {
 	useEffect(() => {
 		console.log("refresh_data effect triggered, connected:", static_data.connected, "champion_map length:", Object.keys(static_data.champion_map).length);
 		refresh_data(setStaticData, static_data);
+		refresh_eternals(setStaticData, static_data);
 	}, [static_data.champion_map, static_data.connected, refresh_generation]);
 
 	useEffect(() => {
@@ -211,7 +232,7 @@ export default function App() {
 
 	useEffect(() => {
 		if (!static_data.connected) {
-			setSessionData({ champ_select_session: null, gameflow_session: null });
+			setSessionData({ champ_select_session: null, gameflow_session: null, lobby_member_puuids: [] });
 			setStaticData(prev => ({
 				...prev,
 				mastery_data: [],
@@ -231,13 +252,6 @@ export default function App() {
 			setSessionData(prev => ({ ...prev, champ_select_session: null }));
 			return;
 		}
-
-		refresh_champ_select_session(setSessionData);
-		const interval = window.setInterval(() => {
-			refresh_champ_select_session(setSessionData);
-		}, 2000);
-
-		return () => window.clearInterval(interval);
 	}, [session_data.gameflow_session?.phase, setSessionData]);
 
 	useEffect(() => {
@@ -245,7 +259,7 @@ export default function App() {
 		let cleanup: Array<() => void> = [];
 
 		const initialize_event_listeners = async () => {
-			const [unlisten_connection, unlisten_champ_select, unlisten_gameflow, unlisten_lcu_refresh] = await Promise.all([
+			const [unlisten_connection, unlisten_champ_select, unlisten_gameflow, unlisten_lobby_members, unlisten_lcu_refresh] = await Promise.all([
 				listen<boolean>("connection", (event) => {
 					console.log("League connection status changed:", event.payload);
 					setStaticData(prev => ({ ...prev, connected: event.payload }));
@@ -261,6 +275,13 @@ export default function App() {
 						refresh_champ_select_session(setSessionData);
 					}
 				}),
+				listen<{ data: APILobbyMember[], uri: string }>("lobby", (event) => {
+					if (event.payload.uri != "/lol-lobby/v2/lobby/members") {
+						return;
+					}
+					console.log("Lobby members event:", event.payload);
+					setSessionData(prev => ({ ...prev, lobby_member_puuids: (event.payload.data ?? []).map(member => String(member.puuid)).filter(Boolean) }));
+				}),
 				listen<boolean>("lcu-refresh", () => {
 					console.log("LCU refresh requested by backend");
 					setRefreshGeneration(prev => prev + 1);
@@ -271,11 +292,12 @@ export default function App() {
 				unlisten_connection();
 				unlisten_champ_select();
 				unlisten_gameflow();
+				unlisten_lobby_members();
 				unlisten_lcu_refresh();
 				return;
 			}
 
-			cleanup = [unlisten_connection, unlisten_champ_select, unlisten_gameflow, unlisten_lcu_refresh];
+			cleanup = [unlisten_connection, unlisten_champ_select, unlisten_gameflow, unlisten_lobby_members, unlisten_lcu_refresh];
 
 			const connected = await invoke<boolean>("get_connected");
 			if (!is_active) {
@@ -293,7 +315,7 @@ export default function App() {
 			}
 		};
 
-		initialize_event_listeners();
+		initialize_event_listeners().then(() => {});
 
 		return () => {
 			is_active = false;

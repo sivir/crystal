@@ -63,6 +63,10 @@ impl Data {
 			EventKind::json_api_event_callback("/lol-gameflow/v1/session"),
 			LcuEventHandler { app_handle: app_handle.clone(), event_name: "gameflow" },
 		);
+		ws_client.subscribe(
+			EventKind::json_api_event_callback("/lol-lobby/v2/lobby"),
+			LcuEventHandler { app_handle: app_handle.clone(), event_name: "lobby" },
+		);
 		ws_client
 	}
 
