@@ -1,14 +1,16 @@
-import { useStaticData, useSessionData, APIChampSelectPlayer, default_mastery_data } from "@/data_context";
+import { useStaticData, useSessionData, default_mastery_data } from "@/data_context";
+import type { APIChampSelectPlayer } from "@/data_context";
 import { useEffect, useMemo, useState } from "react";
-import { champion_name, lcu_get_request } from "@/lib/utils.ts";
+import { champion_name, lcu_get_request, lcu_post_request } from "@/lib/utils.ts";
 import { ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID, ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID } from "@/lib/challenges";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, X } from "lucide-react";
+import { Check, RefreshCw, X } from "lucide-react";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { Button } from "@/components/ui/button";
 
 const ARENA_QUEUE_ID = 1700;
 const ARAM_QUEUE_ID = 450;
@@ -16,8 +18,10 @@ const ARAM_MAYHEM_QUEUE_ID = 2400;
 const ARURF_QUEUE_ID = 900;
 
 type TableChampion = {
+	row_id: string;
 	champion_id: number;
 	is_completed?: boolean;
+	swap_action?: { type: "trade"; trade_id: number } | { type: "bench" };
 };
 
 export default function Lobby() {
@@ -25,7 +29,7 @@ export default function Lobby() {
 	const { session_data } = useSessionData();
 	const [table_champions, set_table_champions] = useState<TableChampion[]>([]);
 	const [hide_mastery_level, set_hide_mastery_level] = usePersistedState<number>('lobby.hide_mastery_level', 0);
-	const [is_loading, set_is_loading] = useState(false);
+	const [swapping_champion_id, set_swapping_champion_id] = useState<number | null>(null);
 
 	const game_mode = useMemo(() => {
 		return session_data.gameflow_session?.gameData?.queue?.id ?? -1;
@@ -33,39 +37,53 @@ export default function Lobby() {
 
 	const in_champ_select = session_data.gameflow_session?.phase == "ChampSelect";
 	const supported_mode = game_mode == ARENA_QUEUE_ID || game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID;
+	const can_swap_champions = game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID;
 
 	useEffect(() => {
 		if (!in_champ_select || !supported_mode) {
 			set_table_champions([]);
-			set_is_loading(false);
 			return;
 		}
 		if (game_mode == ARENA_QUEUE_ID) {
-			set_is_loading(true);
 			const arena_completed = static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID]?.completedIds ?? [];
 			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list") // typo is intentional
 				.then((response) => {
 					set_table_champions((response ?? []).map(champion_id => ({
+						row_id: `arena-${champion_id}`,
 						champion_id,
 						is_completed: arena_completed.includes(champion_id)
 					})));
-				})
-				.catch(error => console.error("Error fetching arena champion list:", error))
-				.finally(() => set_is_loading(false));
+				}).catch(error => console.error("Error fetching arena champion list:", error));
 		}
-		if (game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID) {
+		if (can_swap_champions) {
+			let is_cancelled = false;
 			const aram_completed = static_data.lcu_data[ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID]?.completedIds ?? [];
-			const champions = session_data.champ_select_session?.myTeam.map((player: APIChampSelectPlayer) => ({
-				champion_id: player.championId,
-				is_completed: aram_completed.includes(player.championId)
-			})).concat(session_data.champ_select_session?.benchChampions.map((benchChamp: any) => ({
-				champion_id: benchChamp.championId,
-				is_completed: aram_completed.includes(benchChamp.championId)
-			}))).filter(champion => champion.champion_id > 0) ?? [];
-			set_table_champions(champions);
-			set_is_loading(false);
+
+			if (is_cancelled) return;
+			const trade_by_cell_id = new Map(session_data.champ_select_session?.trades.map(trade => [trade.cellId, trade.id]));
+			const team_champions: TableChampion[] = session_data.champ_select_session?.myTeam.map((player: APIChampSelectPlayer) => {
+				const trade_id = trade_by_cell_id.get(player.cellId);
+				return {
+					row_id: `team-${player.cellId}-${player.championId}`,
+					champion_id: player.championId,
+					is_completed: aram_completed.includes(player.championId),
+					swap_action: trade_id ? { type: "trade" as const, trade_id } : undefined,
+				};
+			}) ?? [];
+			const bench_champions: TableChampion[] = session_data.champ_select_session?.benchChampions.map((bench_champ, index) => ({
+					row_id: `bench-${index}-${bench_champ.championId}`,
+					champion_id: bench_champ.championId,
+					is_completed: aram_completed.includes(bench_champ.championId),
+					swap_action: { type: "bench" as const },
+			})) ?? [];
+
+			set_table_champions(team_champions.concat(bench_champions).filter(champion => champion.champion_id > 0));
+
+			return () => {
+				is_cancelled = true;
+			};
 		}
-	}, [in_champ_select, game_mode, session_data.champ_select_session]);
+	}, [in_champ_select, supported_mode, can_swap_champions, game_mode, session_data.champ_select_session, static_data.lcu_data]);
 
 	const sorted_table_champions = useMemo(() => {
 		return [...table_champions]
@@ -84,6 +102,22 @@ export default function Lobby() {
 				return mastery_b.championPoints - mastery_a.championPoints;
 			});
 	}, [table_champions, static_data.mastery_data, hide_mastery_level]);
+
+	const swap_champion = async (champion: TableChampion) => {
+		if (!champion.swap_action) return;
+		set_swapping_champion_id(champion.champion_id);
+		try {
+			if (champion.swap_action.type === "trade") {
+				await lcu_post_request(`/lol-champ-select/v1/session/champion-swaps/${champion.swap_action.trade_id}/request`, "");
+			} else {
+				await lcu_post_request(`/lol-champ-select/v1/session/bench/swap/${champion.champion_id}`, "");
+			}
+		} catch (error) {
+			console.error(`Error swapping champion ${champion.champion_id}:`, error);
+		} finally {
+			set_swapping_champion_id(null);
+		}
+	};
 
 	return (
 		<div className="p-6 space-y-6">
@@ -129,8 +163,6 @@ export default function Lobby() {
 					<CardContent>
 						{!has_lcu_data ? (
 							<p className="text-muted-foreground">Loading challenge data...</p>
-						) : is_loading ? (
-							<p className="text-muted-foreground">Loading champions...</p>
 						) : sorted_table_champions.length === 0 ? (
 							<p className="text-muted-foreground">
 								{table_champions.length === 0 ? "No champions available" : "All champions filtered out"}
@@ -143,24 +175,39 @@ export default function Lobby() {
 											<TableRow>
 												<TableHead>Champion</TableHead>
 												{game_mode != ARURF_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
+												{can_swap_champions && <TableHead className="text-center">Swap</TableHead>}
 											</TableRow>
 										</TableHeader>
 										<TableBody>
-											{sorted_table_champions.map(({ champion_id, is_completed }) => (
-												<TableRow key={champion_id}>
-													<TableCell>
-														<div className="flex items-center gap-2">
-															<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion_id) ?? default_mastery_data} className="w-8 h-8" />
-															{champion_name(champion_id, static_data.champion_map)}
-														</div>
+										{sorted_table_champions.map((champion) => (
+											<TableRow key={champion.row_id}>
+												<TableCell>
+													<div className="flex items-center gap-2">
+													<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion.champion_id) ?? default_mastery_data} className="w-8 h-8" />
+													{champion_name(champion.champion_id, static_data.champion_map)}
+													</div>
+												</TableCell>
+												{game_mode != ARURF_QUEUE_ID &&  <TableCell className="text-center">
+												{champion.is_completed ? (
+														<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
+													) : (
+														<X className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto" />
+													)}
+												</TableCell>}
+												{can_swap_champions && (
+													<TableCell className="text-center">
+														<Button
+															type="button"
+															variant="ghost"
+															size="icon"
+															disabled={!champion.swap_action || swapping_champion_id === champion.champion_id}
+															onClick={() => swap_champion(champion)}
+															title={champion.swap_action ? "Swap to this champion" : "No swap available"}
+														>
+															<RefreshCw className={`h-4 w-4 ${swapping_champion_id === champion.champion_id ? "animate-spin" : ""}`} />
+														</Button>
 													</TableCell>
-													{game_mode != ARURF_QUEUE_ID &&  <TableCell className="text-center">
-														{is_completed ? (
-															<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
-														) : (
-															<X className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto" />
-														)}
-													</TableCell>}
+												)}
 												</TableRow>
 											))}
 										</TableBody>

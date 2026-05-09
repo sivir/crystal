@@ -33,6 +33,7 @@ export const default_mastery_data: APIMasteryDataEntry = {
 }
 
 export type APIDatabaseData = {
+	riot_id?: string;
 	riot_data: any;
 	mastery_data: APIMasteryDataEntry[];
 }
@@ -148,6 +149,12 @@ export type APIChampSelectPlayer = {
 	wardSkinId: number;
 }
 
+type APIChampSelectTrade = {
+	cellId: number;
+	id: number;
+	status: string;
+};
+
 export type APIChampSelectSession = {
 	actions: any[][];
 	allowBattleBoost: boolean;
@@ -184,7 +191,11 @@ export type APIChampSelectSession = {
 		phase: string;
 		totalTimeInPhase: number;
 	};
-	trades: any[];
+	trades: APIChampSelectTrade[];
+}
+
+export type APILobbyMember = {
+	puuid: string;
 }
 
 export type APIGameflowSession = {
@@ -285,6 +296,7 @@ export interface StaticData {
 interface SessionData {
 	champ_select_session: APIChampSelectSession | null;
 	gameflow_session: APIGameflowSession | null;
+	lobby_member_puuids: string[];
 }
 
 const initial_page_data: StaticData = {
@@ -304,6 +316,7 @@ const initial_page_data: StaticData = {
 const initial_session_data: SessionData = {
 	champ_select_session: null,
 	gameflow_session: null,
+	lobby_member_puuids: [],
 };
 
 const StaticDataContext = createContext<{ static_data: StaticData, setStaticData: React.Dispatch<React.SetStateAction<StaticData>> }>({
