@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { Button } from "@/components/ui/button";
 
-const ARENA_QUEUE_ID = 1700;
+const ARENA_QUEUE_ID = 1750;
+//const ARENA_QUEUE_ID = 1700;
 const ARAM_QUEUE_ID = 450;
 const ARAM_MAYHEM_QUEUE_ID = 2400;
 const ARURF_QUEUE_ID = 900;
