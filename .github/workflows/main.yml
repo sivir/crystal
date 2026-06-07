@@ -31,7 +31,7 @@ jobs:
           targets: ${{ matrix.rust-target }}
 
       - name: install frontend dependencies
-        run: bun install
+        run: bun ci
 
       - uses: tauri-apps/tauri-action@v0
         env:
