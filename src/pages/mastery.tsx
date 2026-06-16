@@ -57,6 +57,9 @@ export default function Mastery() {
 		});
 	}, [class_data]);
 
+		const m10_or_above_count = static_data.mastery_data.filter(mastery => mastery.championLevel >= 10).length;
+		const path_champion_count = m10_path_ids.size + m10_or_above_count;
+
 	return (
 		<div className="p-6 space-y-6"> 
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -151,7 +154,19 @@ export default function Mastery() {
 								})}
 							</div>
 						</ChartContainer>
- 
+
+							{optimal_path && (
+								<div className="mb-2 rounded-md border bg-muted/30 p-2">
+									<div className="flex items-center justify-between gap-3">
+										<span className="text-xs font-semibold">Path + M10 Champions</span>
+										<span className="text-lg font-semibold leading-none text-purple-500">{path_champion_count}</span>
+									</div>
+									<div className="mt-0.5 text-[10px] text-muted-foreground">
+										{m10_path_ids.size} on path + {m10_or_above_count} already M10+
+									</div>
+								</div>
+							)}
+
 						{optimal_path && (
 							<div className="grid grid-cols-2 gap-1.5">
 								{([['m7', 'M7', optimal_path.m7] as const, ['m10', 'M10', optimal_path.m10] as const]).map(([key, label, path]) => {

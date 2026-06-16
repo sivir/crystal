@@ -14,7 +14,7 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 	if (!static_data.connected) {
 		console.log("not connected, skipping refresh");
 		setLoading(false, 0);
-		return;
+		return Promise.resolve();
 	}
 	setLoading(true, 0);
 
@@ -102,6 +102,7 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 
 				const skins = await skins_promise;
 				if (skins != null) {
+					console.log("skins data", skins);
 					setStaticData(prev => ({ ...prev, minimal_skins: skins }));
 				}
 			})
@@ -120,7 +121,7 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 			.finally(update_progress)
 	);
 
-	Promise.all(primary_promises).then(() => {
+	return Promise.all(primary_promises).then(() => {
 		setLoading(false, 100);
 	}).catch((error) => {
 		console.error("Error during refresh_data:", error);
@@ -222,8 +223,9 @@ export default function App() {
 
 	useEffect(() => {
 		console.log("refresh_data effect triggered, connected:", static_data.connected, "champion_map length:", Object.keys(static_data.champion_map).length);
-		refresh_data(setStaticData, static_data);
-		refresh_eternals(setStaticData, static_data);
+		refresh_data(setStaticData, static_data).then(() => {
+			refresh_eternals(setStaticData, static_data);
+		});
 	}, [static_data.champion_map, static_data.connected, refresh_generation]);
 
 	useEffect(() => {

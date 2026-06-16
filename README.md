@@ -42,17 +42,17 @@ flowchart TD
             LCU_REST["LCU REST Client\n(irelia)"]
             LCU_WS["LCU WebSocket\n(irelia)"]
             CONN_LOOP["Connection Loop\n(5s poll + health check)"]
-            CMDS["Tauri Commands\n(lcu_request, http_request,\nget_connected)"]
+            CMDS["Tauri Commands\n(lcu_request, http_request, get_connected)"]
             TRAY["System Tray\n(show/hide, quit)"]
         end
 
         subgraph Frontend["React Frontend"]
             MAIN["main.tsx\n(providers)"]
             APP["App.tsx\n(data fetching & events)"]
-            CTX_STATIC["StaticDataContext\n(challenges, mastery, champions,\nskins, eternals, loot)"]
+            CTX_STATIC["StaticDataContext\n(challenges, mastery, champions, skins, eternals, loot)"]
             CTX_SESSION["SessionDataContext\n(champ select, gameflow)"]
             LAYOUT["Layout\n(sidebar, titlebar)"]
-            PAGES["Pages\n(Home, Mastery, Lobby, Profile,\nSkins, Eternals, Team Builder,\nSettings, Debug, User)"]
+            PAGES["Pages\n(Home, Mastery, Lobby, Profile, Skins, Eternals, Team Builder, Settings, Debug, User)"]
         end
     end
 
@@ -85,12 +85,12 @@ flowchart TD
 
     subgraph PARALLEL["Phase 1 — Parallel Requests"]
         direction LR
-        P1["LCU: /lol-challenges/v1/\nchallenges/local-player\n→ lcu_data"]
-        P2["LCU: /lol-summoner/v1/\ncurrent-summoner\n→ summoner info"]
-        P3["LCU: /lol-loot/v2/\nplayer-loot-map\n→ loot_data"]
+        P1["LCU: /lol-challenges/v1/\nchallenges/local-player → lcu_data"]
+        P2["LCU: /lol-summoner/v1/\ncurrent-summoner → summoner info"]
+        P3["LCU: /lol-loot/v2/\nplayer-loot-map → loot_data"]
     end
 
-    P2 --> REGION["LCU: /riotclient/\nregion-locale"]
+    P2 --> REGION["LCU: /riotclient/region-locale"]
     REGION --> SUPA_AND_SKINS
 
     subgraph SUPA_AND_SKINS["Concurrent Sub-Requests"]
@@ -117,24 +117,24 @@ flowchart TD
 title: Supabase Edge Function (get-user)
 ---
 flowchart TD
-    REQ["Client Request\n(riot_id, region)"] --> AUTH{"x-secret\nheader valid?"}
+    REQ["Client Request (riot_id, region)"] --> AUTH{"x-secret header valid?"}
     AUTH -->|"No (logged, not blocked)"| CONTINUE
     AUTH -->|Yes| CONTINUE
 
-    CONTINUE --> RIOT_ACCOUNT["Riot API:\nGET /riot/account/v1/accounts/\nby-riot-id/{name}/{tag}\n→ puuid"]
+    CONTINUE --> RIOT_ACCOUNT["Riot API: GET /riot/account/v1/accounts/by-riot-id/{name}/{tag} → puuid"]
 
-    RIOT_ACCOUNT --> DB_CHECK{"User exists\nin PostgreSQL?"}
+    RIOT_ACCOUNT --> DB_CHECK{"User exists in PostgreSQL?"}
 
-    DB_CHECK -->|No| FETCH_FRESH["Riot API:\nGET challenges + mastery\nfor puuid"]
+    DB_CHECK -->|No| FETCH_FRESH["Riot API: GET challenges + mastery for puuid"]
     FETCH_FRESH --> INSERT["INSERT into users table"]
-    INSERT --> RETURN_FRESH["Return fresh\nriot_data + mastery_data"]
+    INSERT --> RETURN_FRESH["Return fresh riot_data + mastery_data"]
 
-    DB_CHECK -->|Yes| STALE_CHECK{"Last update\n> 10 min ago?"}
-    STALE_CHECK -->|Yes| FETCH_UPDATE["Riot API:\nGET challenges + mastery"]
+    DB_CHECK -->|Yes| STALE_CHECK{"Last update > 10 min ago?"}
+    STALE_CHECK -->|Yes| FETCH_UPDATE["Riot API: GET challenges + mastery"]
     FETCH_UPDATE --> UPDATE["UPDATE users table"]
-    UPDATE --> RETURN_UPDATED["Return updated\nriot_data + mastery_data\n+ cached lcu_data"]
+    UPDATE --> RETURN_UPDATED["Return updated riot_data + mastery_data + cached lcu_data"]
 
-    STALE_CHECK -->|No| RETURN_CACHED["Return cached\nriot_data + mastery_data\n+ lcu_data"]
+    STALE_CHECK -->|No| RETURN_CACHED["Return cached riot_data + mastery_data + lcu_data"]
 ```
 
 ![alt text](image.png)
