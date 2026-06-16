@@ -36,6 +36,7 @@ export type APIDatabaseData = {
 	riot_id?: string;
 	riot_data: any;
 	mastery_data: APIMasteryDataEntry[];
+	summoner_data?: any;
 }
 
 export type APISummonerData = {
@@ -239,6 +240,7 @@ export type APILootData = {
 		[id: string]: {
 			parentStoreItemId: number;
 			storeItemId: number;
+			upgradeEssenceValue?: number;
 		};
 	};
 };
@@ -288,6 +290,7 @@ export interface StaticData {
 		[id: string]: {
 			parentStoreItemId: number;
 			storeItemId: number;
+			upgradeEssenceValue?: number;
 		};
 	};
 	minimal_skins: APIMinimalSkin[];

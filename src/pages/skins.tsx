@@ -18,6 +18,7 @@ type Skin = {
 	rarity: string;
 	legacy: boolean;
 	in_loot: boolean;
+	upgrade_essence: number;
 };
 
 type ChampionSkinRow = {
@@ -30,52 +31,23 @@ type ChampionSkinRow = {
 	is_expanded: boolean;
 };
 
+type ChallengeSummaryItem = {
+	current: number;
+	loot_contribution: number;
+	requirement: number;
+	essence_required: number;
+};
+
 type SkinDataSummary = {
-	total: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	victorious: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	legacy: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	epic: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	legendary: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	mythic: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	ultimate: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	champions_5plus: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
-	champions_15plus: {
-		current: number;
-		loot_contribution: number;
-		requirement: number;
-	},
+	total: ChallengeSummaryItem;
+	victorious: ChallengeSummaryItem;
+	legacy: ChallengeSummaryItem;
+	epic: ChallengeSummaryItem;
+	legendary: ChallengeSummaryItem;
+	mythic: ChallengeSummaryItem;
+	ultimate: ChallengeSummaryItem;
+	champions_5plus: ChallengeSummaryItem;
+	champions_15plus: ChallengeSummaryItem;
 };
 
 type SortKey = "champion" | "total" | "owned" | "loot" | "owned_plus_loot" | "unowned";
@@ -87,13 +59,14 @@ export default function Skins() {
 	const [table_data, set_table_data] = useState<ChampionSkinRow[]>([]);
 
 	const all_skins = useMemo<Skin[]>(() => {
-		const loot_skin_ids = new Set<number>();
+		const loot_items = new Map<number, { storeItemId: number; upgradeEssenceValue?: number }>();
 		Object.values(static_data.loot_data).forEach(item => {
-			loot_skin_ids.add(item.storeItemId);
+			loot_items.set(item.storeItemId, item);
 		});
 
 		return static_data.minimal_skins.map(skin => {
 			const metadata = static_data.skin_map[skin.id];
+			const loot_item = loot_items.get(skin.id);
 			return {
 				id: skin.id,
 				name: metadata?.name || `Skin ${skin.id}`,
@@ -102,7 +75,8 @@ export default function Skins() {
 				owned: skin.ownership?.owned || false,
 				rarity: metadata?.rarity || "kNoRarity",
 				legacy: metadata?.isLegacy || false,
-				in_loot: loot_skin_ids.has(skin.id),
+				in_loot: !!loot_item,
+				upgrade_essence: loot_item?.upgradeEssenceValue || 0,
 			};
 		});
 	}, [static_data.minimal_skins, static_data.loot_data, static_data.skin_map]);
@@ -258,51 +232,125 @@ export default function Skins() {
 		const current_champions_5plus = current_value(challenge_ids.champions_5plus);
 		const loot_contribution_champions_5plus = champions_5plus_after_loot - current_champions_5plus;
 
+		const get_min_essence_required = (needed: number, shards: Skin[]) => {
+			if (needed <= 0) return 0;
+			const sorted = [...shards].sort((a, b) => a.upgrade_essence - b.upgrade_essence);
+			const cheapest = sorted.slice(0, needed);
+			return cheapest.reduce((sum, s) => sum + s.upgrade_essence, 0);
+		};
+
+		const total_req = master_threshold(challenge_ids.total);
+		const total_curr = current_value(challenge_ids.total);
+		const total_essence = get_min_essence_required(Math.max(0, total_req - total_curr), loot_skins);
+
+		const legacy_req = master_threshold(challenge_ids.legacy);
+		const legacy_curr = current_value(challenge_ids.legacy);
+		const legacy_essence = get_min_essence_required(Math.max(0, legacy_req - legacy_curr), loot_skins.filter(skin => skin.legacy));
+
+		const epic_req = master_threshold(challenge_ids.epic);
+		const epic_curr = current_value(challenge_ids.epic);
+		const epic_essence = get_min_essence_required(Math.max(0, epic_req - epic_curr), loot_skins.filter(skin => skin.rarity === "kEpic"));
+
+		const legendary_req = master_threshold(challenge_ids.legendary);
+		const legendary_curr = current_value(challenge_ids.legendary);
+		const legendary_essence = get_min_essence_required(Math.max(0, legendary_req - legendary_curr), loot_skins.filter(skin => skin.rarity === "kLegendary"));
+
+		const mythic_req = master_threshold(challenge_ids.mythic);
+		const mythic_curr = current_value(challenge_ids.mythic);
+		const mythic_essence = get_min_essence_required(Math.max(0, mythic_req - mythic_curr), loot_skins.filter(skin => skin.rarity === "kMythic"));
+
+		const ultimate_req = master_threshold(challenge_ids.ultimate);
+		const ultimate_curr = current_value(challenge_ids.ultimate);
+		const ultimate_essence = get_min_essence_required(Math.max(0, ultimate_req - ultimate_curr), loot_skins.filter(skin => skin.rarity === "kUltimate"));
+
+		// champions_5plus essence calculation
+		const champion_upgrade_costs_5plus: number[] = [];
+		Object.keys(static_data.champion_map).forEach(champion_id_str => {
+			const champion_id = parseInt(champion_id_str);
+			const owned = champion_owned_counts.get(champion_id) || 0;
+			if (owned >= 5) return;
+			const n_needed = 5 - owned;
+			const champ_loot = loot_skins.filter(skin => skin.champion_id === champion_id);
+			if (champ_loot.length >= n_needed) {
+				const cost = get_min_essence_required(n_needed, champ_loot);
+				champion_upgrade_costs_5plus.push(cost);
+			}
+		});
+		champion_upgrade_costs_5plus.sort((a, b) => a - b);
+		const needed_champions_5plus = Math.max(0, master_threshold(challenge_ids.champions_5plus) - current_champions_5plus);
+		const champions_5plus_essence = champion_upgrade_costs_5plus.slice(0, needed_champions_5plus).reduce((sum, val) => sum + val, 0);
+
+		// champions_15plus essence calculation
+		const champion_upgrade_costs_15plus: number[] = [];
+		Object.keys(static_data.champion_map).forEach(champion_id_str => {
+			const champion_id = parseInt(champion_id_str);
+			const owned = champion_owned_counts.get(champion_id) || 0;
+			if (owned >= 15) return;
+			const n_needed = 15 - owned;
+			const champ_loot = loot_skins.filter(skin => skin.champion_id === champion_id);
+			if (champ_loot.length >= n_needed) {
+				const cost = get_min_essence_required(n_needed, champ_loot);
+				champion_upgrade_costs_15plus.push(cost);
+			}
+		});
+		champion_upgrade_costs_15plus.sort((a, b) => a - b);
+		const needed_champions_15plus = Math.max(0, master_threshold(challenge_ids.champions_15plus) - current_value(challenge_ids.champions_15plus));
+		const champions_15plus_essence = champion_upgrade_costs_15plus.slice(0, needed_champions_15plus).reduce((sum, val) => sum + val, 0);
+
 		return {
 			total: {
-				current: current_value(challenge_ids.total),
+				current: total_curr,
 				loot_contribution: loot_contribution_total,
-				requirement: master_threshold(challenge_ids.total),
+				requirement: total_req,
+				essence_required: total_essence,
 			},
 			victorious: {
 				current: current_value(challenge_ids.victorious),
 				loot_contribution: 0,
 				requirement: master_threshold(challenge_ids.victorious),
+				essence_required: 0,
 			},
 			legacy: {
-				current: current_value(challenge_ids.legacy),
+				current: legacy_curr,
 				loot_contribution: loot_contribution_legacy,
-				requirement: master_threshold(challenge_ids.legacy),
+				requirement: legacy_req,
+				essence_required: legacy_essence,
 			},
 			epic: {
-				current: current_value(challenge_ids.epic),
+				current: epic_curr,
 				loot_contribution: loot_contribution_epic,
-				requirement: master_threshold(challenge_ids.epic),
+				requirement: epic_req,
+				essence_required: epic_essence,
 			},
 			legendary: {
-				current: current_value(challenge_ids.legendary),
+				current: legendary_curr,
 				loot_contribution: loot_contribution_legendary,
-				requirement: master_threshold(challenge_ids.legendary),
+				requirement: legendary_req,
+				essence_required: legendary_essence,
 			},
 			mythic: {
-				current: current_value(challenge_ids.mythic),
+				current: mythic_curr,
 				loot_contribution: loot_contribution_mythic,
-				requirement: master_threshold(challenge_ids.mythic),
+				requirement: mythic_req,
+				essence_required: mythic_essence,
 			},
 			ultimate: {
-				current: current_value(challenge_ids.ultimate),
+				current: ultimate_curr,
 				loot_contribution: loot_contribution_ultimate,
-				requirement: master_threshold(challenge_ids.ultimate),
+				requirement: ultimate_req,
+				essence_required: ultimate_essence,
 			},
 			champions_5plus: {
 				current: current_champions_5plus,
 				loot_contribution: loot_contribution_champions_5plus,
 				requirement: master_threshold(challenge_ids.champions_5plus),
+				essence_required: champions_5plus_essence,
 			},
 			champions_15plus: {
 				current: current_value(challenge_ids.champions_15plus),
 				loot_contribution: max_champion_total,
 				requirement: master_threshold(challenge_ids.champions_15plus),
+				essence_required: champions_15plus_essence,
 			},
 		};
 	}, [static_data.skin_map, all_skins, owned_skins, loot_skins, static_data.lcu_data]);
@@ -339,6 +387,9 @@ export default function Skins() {
 								<span className="text-muted-foreground"> = {skin_data_summary.total.current + skin_data_summary.total.loot_contribution}</span>
 								<span className="text-muted-foreground"> / {skin_data_summary.total.requirement}</span>
 							</p>
+							{skin_data_summary.total.essence_required > 0 && (
+								<p className="text-xs text-orange-500 font-semibold">Min OE: {skin_data_summary.total.essence_required.toLocaleString()}</p>
+							)}
 						</div>
 						<div className="space-y-1">
 							<p className="text-sm text-muted-foreground">Champions (5+)</p>
@@ -350,6 +401,9 @@ export default function Skins() {
 								<span className="text-muted-foreground"> = {skin_data_summary.champions_5plus.current + skin_data_summary.champions_5plus.loot_contribution}</span>
 								<span className="text-muted-foreground"> / {skin_data_summary.champions_5plus.requirement}</span>
 							</p>
+							{skin_data_summary.champions_5plus.essence_required > 0 && (
+								<p className="text-xs text-orange-500 font-semibold">Min OE: {skin_data_summary.champions_5plus.essence_required.toLocaleString()}</p>
+							)}
 						</div>
 						<div className="space-y-1">
 							<p className="text-sm text-muted-foreground">Champions (15+)</p>
@@ -358,22 +412,31 @@ export default function Skins() {
 								<span className="text-muted-foreground"> (Max: {skin_data_summary.champions_15plus.loot_contribution})</span>
 								<span className="text-muted-foreground"> / {skin_data_summary.champions_15plus.requirement}</span>
 							</p>
+							{skin_data_summary.champions_15plus.essence_required > 0 && (
+								<p className="text-xs text-orange-500 font-semibold">Min OE: {skin_data_summary.champions_15plus.essence_required.toLocaleString()}</p>
+							)}
 						</div>
 					</div>
 
 					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-						<div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-							<p className="text-xs text-muted-foreground mb-1">Ultimate</p>
-							<p className="text-sm font-semibold text-orange-500">
-								{skin_data_summary.ultimate.current}
-								{skin_data_summary.ultimate.loot_contribution > 0 && (
+						<div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex flex-col justify-between">
+							<div>
+								<p className="text-xs text-muted-foreground mb-1">Ultimate</p>
+								<p className="text-sm font-semibold text-orange-500">
+									{skin_data_summary.ultimate.current}
+									{skin_data_summary.ultimate.loot_contribution > 0 && (
 										<span className="text-green-600 dark:text-green-400"> +{skin_data_summary.ultimate.loot_contribution}</span>
 									)}
 									<span className="text-muted-foreground"> = {skin_data_summary.ultimate.current + skin_data_summary.ultimate.loot_contribution}</span>
 									<span className="text-muted-foreground"> / {skin_data_summary.ultimate.requirement}</span>
 								</p>
 							</div>
-							<div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+							{skin_data_summary.ultimate.essence_required > 0 && (
+								<p className="text-[10px] text-orange-500 font-semibold mt-1">Min OE: {skin_data_summary.ultimate.essence_required.toLocaleString()}</p>
+							)}
+						</div>
+						<div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex flex-col justify-between">
+							<div>
 								<p className="text-xs text-muted-foreground mb-1">Mythic</p>
 								<p className="text-sm font-semibold text-purple-500">
 									{skin_data_summary.mythic.current}
@@ -384,7 +447,12 @@ export default function Skins() {
 									<span className="text-muted-foreground"> / {skin_data_summary.mythic.requirement}</span>
 								</p>
 							</div>
-							<div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+							{skin_data_summary.mythic.essence_required > 0 && (
+								<p className="text-[10px] text-orange-500 font-semibold mt-1">Min OE: {skin_data_summary.mythic.essence_required.toLocaleString()}</p>
+							)}
+						</div>
+						<div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex flex-col justify-between">
+							<div>
 								<p className="text-xs text-muted-foreground mb-1">Legendary</p>
 								<p className="text-sm font-semibold text-red-500">
 									{skin_data_summary.legendary.current}
@@ -395,7 +463,12 @@ export default function Skins() {
 									<span className="text-muted-foreground"> / {skin_data_summary.legendary.requirement}</span>
 								</p>
 							</div>
-							<div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+							{skin_data_summary.legendary.essence_required > 0 && (
+								<p className="text-[10px] text-orange-500 font-semibold mt-1">Min OE: {skin_data_summary.legendary.essence_required.toLocaleString()}</p>
+							)}
+						</div>
+						<div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex flex-col justify-between">
+							<div>
 								<p className="text-xs text-muted-foreground mb-1">Epic</p>
 								<p className="text-sm font-semibold text-blue-500">
 									{skin_data_summary.epic.current}
@@ -406,7 +479,12 @@ export default function Skins() {
 									<span className="text-muted-foreground"> / {skin_data_summary.epic.requirement}</span>
 								</p>
 							</div>
-							<div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+							{skin_data_summary.epic.essence_required > 0 && (
+								<p className="text-[10px] text-orange-500 font-semibold mt-1">Min OE: {skin_data_summary.epic.essence_required.toLocaleString()}</p>
+							)}
+						</div>
+						<div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex flex-col justify-between">
+							<div>
 								<p className="text-xs text-muted-foreground mb-1">Legacy</p>
 								<p className="text-sm font-semibold text-yellow-600 dark:text-yellow-500">
 									{skin_data_summary.legacy.current}
@@ -417,7 +495,12 @@ export default function Skins() {
 									<span className="text-muted-foreground"> / {skin_data_summary.legacy.requirement}</span>
 								</p>
 							</div>
-							<div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+							{skin_data_summary.legacy.essence_required > 0 && (
+								<p className="text-[10px] text-orange-500 font-semibold mt-1">Min OE: {skin_data_summary.legacy.essence_required.toLocaleString()}</p>
+							)}
+						</div>
+						<div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex flex-col justify-between">
+							<div>
 								<p className="text-xs text-muted-foreground mb-1">Victorious</p>
 								<p className="text-sm font-semibold text-green-600 dark:text-green-500">
 									{skin_data_summary.victorious.current}
@@ -425,6 +508,7 @@ export default function Skins() {
 								</p>
 							</div>
 						</div>
+					</div>
 					</CardContent>
 				</Card>
 			)}
