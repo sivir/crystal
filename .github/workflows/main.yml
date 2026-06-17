@@ -14,6 +14,10 @@ jobs:
       matrix:
         include:
           - platform: "windows-latest"
+            rust-target: "x86_64-pc-windows-msvc"
+            args: ""
+          - platform: "macos-latest"
+            rust-target: "aarch64-apple-darwin"
             args: ""
 
     runs-on: ${{ matrix.platform }}
@@ -24,7 +28,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: ${{ matrix.rust-target }}
 
       - name: install frontend dependencies
         run: bun ci
