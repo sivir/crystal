@@ -294,6 +294,7 @@ export interface StaticData {
 		};
 	};
 	minimal_skins: APIMinimalSkin[];
+	last_update_time: number | null;
 }
 
 interface SessionData {
@@ -314,6 +315,7 @@ const initial_page_data: StaticData = {
 	connected: false,
 	loot_data: {},
 	minimal_skins: [],
+	last_update_time: null,
 };
 
 const initial_session_data: SessionData = {

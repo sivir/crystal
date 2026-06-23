@@ -22,6 +22,16 @@ function ModeToggle() {
 	)
 }
 
+function formatTimestamp(timestamp: number | null): string {
+	if (!timestamp) return "";
+	const d = new Date(timestamp);
+	const now = new Date();
+	const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+	const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+	if (isToday) return time;
+	return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${time}`;
+}
+
 export function StatusBar() {
 	const { static_data, setStaticData } = useStaticData();
 	const { is_loading, loading_progress } = useLoading();
@@ -40,7 +50,7 @@ export function StatusBar() {
 				</div>
 			)}
 
-			{/* Left section: connection status */}
+			{/* Left section: connection status + last update time */}
 			<div className="flex items-center gap-2">
 				<div className="flex items-center gap-1.5">
 					<div className={`h-2 w-2 rounded-full ${static_data.connected ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]"}`} />
@@ -48,6 +58,11 @@ export function StatusBar() {
 						{static_data.connected ? "Connected" : "Disconnected"}
 					</span>
 				</div>
+				{static_data.last_update_time && (
+					<span className="text-muted-foreground/60">
+						Updated {formatTimestamp(static_data.last_update_time)}
+					</span>
+				)}
 			</div>
 
 			{/* Right section: actions + version */}

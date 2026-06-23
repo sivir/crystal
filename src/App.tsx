@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
+import { load } from "@tauri-apps/plugin-store";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIRiotData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 import { setLoading } from "@/lib/loading_state.ts";
@@ -220,34 +221,79 @@ export default function App() {
 	const { session_data, setSessionData } = useSessionData();
 	const [refresh_generation, setRefreshGeneration] = useState(0);
 	const PageComponent = pages[static_data.page].component;
+	const dataLoadedFromStore = useRef(false);
+	const lastSavedTimestamp = useRef<number | null>(null);
+
+	// Load cached data from disk on startup
+	useEffect(() => {
+		let mounted = true;
+		load("ui-state.json", { autoSave: true, defaults: {} }).then(async store => {
+			const cached = await store.get<{
+				lcu_data: APILCUChallengeMap;
+				mastery_data: APIMasteryDataEntry[];
+				loot_data: StaticData['loot_data'];
+				minimal_skins: APIMinimalSkin[];
+				eternals_map_entries: [number, APIEternalsData][];
+				riot_data: APIRiotData;
+				last_update_time: number | null;
+			}>("cached_data");
+			if (mounted && cached) {
+				lastSavedTimestamp.current = cached.last_update_time;
+				setStaticData(prev => ({
+					...prev,
+					lcu_data: cached.lcu_data || {},
+					mastery_data: cached.mastery_data || [],
+					loot_data: cached.loot_data || {},
+					minimal_skins: cached.minimal_skins || [],
+					eternals_map: new Map(cached.eternals_map_entries || []),
+					riot_data: cached.riot_data || prev.riot_data,
+					last_update_time: cached.last_update_time ?? null,
+				}));
+			}
+			if (mounted) {
+				dataLoadedFromStore.current = true;
+			}
+		});
+		return () => { mounted = false; };
+	}, [setStaticData]);
+
+	// Auto-save cached data whenever last_update_time changes to a new value
+	useEffect(() => {
+		if (!dataLoadedFromStore.current) return;
+		if (!static_data.last_update_time) return;
+		if (static_data.last_update_time === lastSavedTimestamp.current) return;
+		lastSavedTimestamp.current = static_data.last_update_time;
+		load("ui-state.json", { autoSave: true, defaults: {} }).then(store => {
+			store.set("cached_data", {
+				lcu_data: static_data.lcu_data,
+				mastery_data: static_data.mastery_data,
+				loot_data: static_data.loot_data,
+				minimal_skins: static_data.minimal_skins,
+				eternals_map_entries: Array.from(static_data.eternals_map.entries()),
+				riot_data: static_data.riot_data,
+				last_update_time: static_data.last_update_time,
+			});
+		});
+	}, [static_data.last_update_time]);
 
 	useEffect(() => {
+		if (!static_data.connected) return;
 		console.log("refresh_data effect triggered, connected:", static_data.connected, "champion_map length:", Object.keys(static_data.champion_map).length);
 		refresh_data(setStaticData, static_data).then(() => {
 			refresh_eternals(setStaticData, static_data);
+			setStaticData(prev => ({ ...prev, last_update_time: Date.now() }));
 		});
 	}, [static_data.champion_map, static_data.connected, refresh_generation]);
 
 	useEffect(() => {
-		console.log("DEBUG: static_data.connected changed to:", static_data.connected);
-	}, [static_data.connected]);
-
-	useEffect(() => {
 		if (!static_data.connected) {
 			setSessionData({ champ_select_session: null, gameflow_session: null, lobby_member_puuids: [] });
-			setStaticData(prev => ({
-				...prev,
-				mastery_data: [],
-				loot_data: {},
-				minimal_skins: [],
-				eternals_map: new Map(),
-			}));
 			setLoading(false, 0);
 			return;
 		}
 
 		refresh_session_data(setSessionData);
-	}, [static_data.connected, refresh_generation, setSessionData, setStaticData]);
+	}, [static_data.connected, refresh_generation, setSessionData]);
 
 	useEffect(() => {
 		if (session_data.gameflow_session?.phase !== "ChampSelect") {
