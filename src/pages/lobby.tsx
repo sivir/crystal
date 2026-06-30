@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { champion_name, lcu_get_request, lcu_post_request } from "@/lib/utils.ts";
 import { ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID, ALL_RANDOM_ALL_CHAMPIONS_CHALLENGE_ID } from "@/lib/challenges";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Check, RefreshCw, X } from "lucide-react";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
@@ -124,25 +123,17 @@ export default function Lobby() {
 		<div className="p-6 space-y-6">
 
 			{!static_data.connected && (
-				<Card>
-					<CardContent className="pt-6">
-						<p className="text-muted-foreground">Not connected to League client</p>
-					</CardContent>
-				</Card>
+				<p className="text-muted-foreground">Not connected to League client</p>
 			)}
 
 			{static_data.connected && !in_champ_select && (
-				<Card>
-					<CardContent className="pt-6">
-						<p className="text-muted-foreground">Not in champion select for Arena/ARAM/ARURF</p>
-					</CardContent>
-				</Card>
+				<p className="text-muted-foreground">Not in champion select for Arena/ARAM/ARURF</p>
 			)}
 
 			{static_data.connected && in_champ_select && supported_mode && (
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle>Champion Progress</CardTitle>
+				<div>
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-lg font-semibold">Champion Progress</h2>
 						<div className="flex items-center gap-2">
 							<span className="text-sm text-muted-foreground">Hide Mastery:</span>
 							<Select
@@ -160,64 +151,60 @@ export default function Lobby() {
 								</SelectContent>
 							</Select>
 						</div>
-					</CardHeader>
-					<CardContent>
-						{!has_lcu_data ? (
-							<p className="text-muted-foreground">Loading challenge data...</p>
-						) : sorted_table_champions.length === 0 ? (
-							<p className="text-muted-foreground">
-								{table_champions.length === 0 ? "No champions available" : "All champions filtered out"}
-							</p>
-						) : (
-							<div className="space-y-2">
-								<div className="rounded-md border">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Champion</TableHead>
-												{game_mode != ARURF_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
-												{can_swap_champions && <TableHead className="text-center">Swap</TableHead>}
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-										{sorted_table_champions.map((champion) => (
-											<TableRow key={champion.row_id}>
-												<TableCell>
-													<div className="flex items-center gap-2">
-													<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion.champion_id) ?? default_mastery_data} className="w-8 h-8" />
-													{champion_name(champion.champion_id, static_data.champion_map)}
-													</div>
-												</TableCell>
-												{game_mode != ARURF_QUEUE_ID &&  <TableCell className="text-center">
-												{champion.is_completed ? (
-														<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
-													) : (
-														<X className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto" />
-													)}
-												</TableCell>}
-												{can_swap_champions && (
-													<TableCell className="text-center">
-														<Button
-															type="button"
-															variant="ghost"
-															size="icon"
-															disabled={!champion.swap_action || swapping_champion_id === champion.champion_id}
-															onClick={() => swap_champion(champion)}
-															title={champion.swap_action ? "Swap to this champion" : "No swap available"}
-														>
-															<RefreshCw className={`h-4 w-4 ${swapping_champion_id === champion.champion_id ? "animate-spin" : ""}`} />
-														</Button>
-													</TableCell>
-												)}
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							</div>
-						)}
-					</CardContent>
-				</Card>
+					</div>
+					{!has_lcu_data ? (
+						<p className="text-muted-foreground">Loading challenge data...</p>
+					) : sorted_table_champions.length === 0 ? (
+						<p className="text-muted-foreground">
+							{table_champions.length === 0 ? "No champions available" : "All champions filtered out"}
+						</p>
+					) : (
+						<div className="rounded-md border">
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Champion</TableHead>
+										{game_mode != ARURF_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
+										{can_swap_champions && <TableHead className="text-center">Swap</TableHead>}
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+								{sorted_table_champions.map((champion) => (
+									<TableRow key={champion.row_id}>
+										<TableCell>
+											<div className="flex items-center gap-2">
+											<ChampionMasteryIcon data={static_data.mastery_data.find((mastery) => mastery.championId == champion.champion_id) ?? default_mastery_data} className="w-8 h-8" />
+											{champion_name(champion.champion_id, static_data.champion_map)}
+											</div>
+										</TableCell>
+										{game_mode != ARURF_QUEUE_ID &&  <TableCell className="text-center">
+										{champion.is_completed ? (
+												<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
+											) : (
+												<X className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto" />
+											)}
+										</TableCell>}
+										{can_swap_champions && (
+											<TableCell className="text-center">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													disabled={!champion.swap_action || swapping_champion_id === champion.champion_id}
+													onClick={() => swap_champion(champion)}
+													title={champion.swap_action ? "Swap to this champion" : "No swap available"}
+												>
+													<RefreshCw className={`h-4 w-4 ${swapping_champion_id === champion.champion_id ? "animate-spin" : ""}`} />
+												</Button>
+											</TableCell>
+										)}
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						</div>
+					)}
+				</div>
 			)}
 		</div>
 	);
