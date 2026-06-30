@@ -33,5 +33,13 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		]
+	},
+	"plugins": {
+		"updater": {
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2QjRBNDMyQUM4RTI5N0YKUldSL0tZNnNNcVMwVmh4S0lmMHVTUVUyRitBdHNwOTZyN09tMGg3VzM1N1c0Ynh3UXA4dG5IU3EK",
+			"endpoints": [
+				"https://github.com/sivir/crystal/releases/latest/download/latest.json"
+			]
+		}
 	}
 }

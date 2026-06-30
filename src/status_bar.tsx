@@ -4,8 +4,10 @@ import { useTheme } from "@/theme-provider.tsx";
 import { refresh_data, refresh_eternals } from "@/App.tsx";
 import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 
-import { Moon, Sun, RefreshCcw, Flame } from "lucide-react";
+import { Moon, Sun, RefreshCcw, Flame, Download } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
@@ -36,10 +38,32 @@ export function StatusBar() {
 	const { static_data, setStaticData } = useStaticData();
 	const { is_loading, loading_progress } = useLoading();
 	const [version, setVersion] = useState<string>("");
+	const [update, setUpdate] = useState<{ version: string; downloadAndInstall: () => Promise<void> } | null>(null);
+	const [installing, setInstalling] = useState(false);
 
 	useEffect(() => {
 		getVersion().then(x => setVersion(x));
 	}, []);
+
+	useEffect(() => {
+		if (!version) return;
+		check().then(result => {
+			if (result && result.version !== version) {
+				setUpdate({ version: result.version, downloadAndInstall: () => result.downloadAndInstall() });
+			}
+		}).catch(() => {});
+	}, [version]);
+
+	const handleUpdate = async () => {
+		if (!update) return;
+		setInstalling(true);
+		try {
+			await update.downloadAndInstall();
+			await relaunch();
+		} catch {
+			setInstalling(false);
+		}
+	};
 
 	return (
 		<footer className="relative flex h-8 items-center justify-between px-3 border-t bg-background/80 backdrop-blur-sm text-xs text-muted-foreground select-none shrink-0">
@@ -85,6 +109,18 @@ export function StatusBar() {
 				>
 					<Flame className={`h-3 w-3 ${is_loading ? "text-orange-400" : ""}`} />
 				</Button>
+				{update && (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-6 w-6 text-blue-500 hover:text-blue-400"
+						onClick={handleUpdate}
+						disabled={installing}
+						title={`Update to v${update.version}`}
+					>
+						<Download className={`h-3 w-3 ${installing ? "animate-bounce" : ""}`} />
+					</Button>
+				)}
 				<ModeToggle />
 				<Separator orientation="vertical" className="h-4 mx-0.5" />
 				<span className="text-muted-foreground/60 tabular-nums">v{version}</span>
