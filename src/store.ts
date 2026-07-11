@@ -11,7 +11,7 @@ export const initial_page_data: StaticData = {
 	riot_data: default_riot_challenge_data,
 	lcu_data: {},
 	mastery_data: [],
-	champion_map: {},ake 
+	champion_map: {},
 	skin_map: {},
 	statstones_map: {},
 	eternals_map: new Map(),
@@ -38,10 +38,12 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
 	static_data: initial_page_data,
 	session_data: initial_session_data,
-	setStaticData: (updater) => set((state) => ({
-		static_data: typeof updater === "function" ? updater(state.static_data) : updater,
-	})),
-	setSessionData: (updater) => set((state) => ({
-		session_data: typeof updater === "function" ? updater(state.session_data) : updater,
-	})),
+	setStaticData: (updater) =>
+		set((state) => ({
+			static_data: typeof updater === "function" ? updater(state.static_data) : updater,
+		})),
+	setSessionData: (updater) =>
+		set((state) => ({
+			session_data: typeof updater === "function" ? updater(state.session_data) : updater,
+		})),
 }));
