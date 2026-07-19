@@ -11,12 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { Button } from "@/components/ui/button";
 
-const ARENA_QUEUE_ID = 1750;
-//const ARENA_QUEUE_ID = 1700;
-const ARAM_QUEUE_ID = 450;
-const ARAM_MAYHEM_QUEUE_ID = 2400;
-const ARURF_QUEUE_ID = 900;
-
 type TableChampion = {
 	row_id: string;
 	champion_id: number;
@@ -30,21 +24,24 @@ export default function Lobby() {
 	const [table_champions, set_table_champions] = useState<TableChampion[]>([]);
 	const [hide_mastery_level, set_hide_mastery_level] = usePersistedState<number>('lobby.hide_mastery_level', 0);
 	const [swapping_champion_id, set_swapping_champion_id] = useState<number | null>(null);
+	const [aram_queues] = usePersistedState<number[]>('settings.aram_queues', [450, 2400]);
+	const [arena_queues] = usePersistedState<number[]>('settings.arena_queues', [1700, 1740, 1750]);
+	const [other_queues] = usePersistedState<number[]>('settings.other_random_queues', [900]);
 
 	const game_mode = useMemo(() => {
 		return session_data.gameflow_session?.gameData?.queue?.id ?? -1;
 	}, [session_data.gameflow_session]);
 
 	const in_champ_select = session_data.gameflow_session?.phase == "ChampSelect";
-	const supported_mode = game_mode == ARENA_QUEUE_ID || game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID;
-	const can_swap_champions = game_mode == ARAM_QUEUE_ID || game_mode == ARAM_MAYHEM_QUEUE_ID || game_mode == ARURF_QUEUE_ID;
+	const supported_mode = [...aram_queues, ...arena_queues, ...other_queues].includes(game_mode);
+	const can_swap_champions = [...aram_queues, ...other_queues].includes(game_mode);
 
 	useEffect(() => {
 		if (!in_champ_select || !supported_mode) {
 			set_table_champions([]);
 			return;
 		}
-		if (game_mode == ARENA_QUEUE_ID) {
+		if (arena_queues.includes(game_mode)) {
 			const arena_completed = static_data.lcu_data[ADAPT_TO_ALL_SITUATIONS_CHALLENGE_ID]?.completedIds ?? [];
 			lcu_get_request<number[]>("/lol-lobby-team-builder/champ-select/v1/crowd-favorte-champion-list") // typo is intentional
 				.then((response) => {
@@ -169,7 +166,7 @@ export default function Lobby() {
 								<TableHeader>
 									<TableRow>
 										<TableHead>Champion</TableHead>
-										{game_mode != ARURF_QUEUE_ID && <TableHead className="text-center">Completed</TableHead>}
+										{!other_queues.includes(game_mode) && <TableHead className="text-center">Completed</TableHead>}
 										{can_swap_champions && <TableHead className="text-center">Swap</TableHead>}
 									</TableRow>
 								</TableHeader>
@@ -182,7 +179,7 @@ export default function Lobby() {
 											{champion_name(champion.champion_id, static_data.champion_map)}
 											</div>
 										</TableCell>
-										{game_mode != ARURF_QUEUE_ID &&  <TableCell className="text-center">
+										{!other_queues.includes(game_mode) && <TableCell className="text-center">
 										{champion.is_completed ? (
 												<Check className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
 											) : (
