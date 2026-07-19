@@ -122,6 +122,11 @@ export default function Lobby() {
 	return (
 		<div className="p-6 space-y-6">
 
+			<div className="flex gap-4 text-sm text-muted-foreground">
+				<span>Phase: <span className="font-medium text-foreground">{session_data.gameflow_session?.phase ?? "—"}</span></span>
+				<span>Queue: <span className="font-medium text-foreground">{game_mode !== -1 ? game_mode : "—"}</span></span>
+			</div>
+
 			{!static_data.connected && (
 				<p className="text-muted-foreground">Not connected to League client</p>
 			)}
