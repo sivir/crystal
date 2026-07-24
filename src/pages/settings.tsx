@@ -8,7 +8,6 @@ import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { useEffect, useState } from "react";
-import { Github, MessageCircle } from "lucide-react";
 
 export default function Settings() {
 	const [close_button_exits_app, set_close_button_exits_app] = usePersistedState<boolean>("settings.close_button_exits_app", false);
@@ -63,93 +62,57 @@ export default function Settings() {
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<Card>
 					<CardHeader className="pb-2">
-						<CardTitle className="flex items-center gap-2 text-base">
-							<MessageCircle className="w-4 h-4" />
-							Support & Feedback
-						</CardTitle>
+						<CardTitle className="text-base">Updates</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<p className="text-sm text-muted-foreground">
-							Message <span className="font-semibold text-foreground">cyanscars</span> on Discord for support, suggestions, and feedback!
-						</p>
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm">Current Version: v{version}</p>
+								{checking ? (
+									<p className="text-xs text-muted-foreground">Checking for updates...</p>
+								) : latestVersion ? (
+									<p className="text-xs text-muted-foreground">
+										{latestVersion === version ? "You are up to date!" : `Latest version: v${latestVersion}`}
+									</p>
+								) : (
+									<p className="text-xs text-muted-foreground">Click below to check for updates.</p>
+								)}
+							</div>
+							<Button size="sm" onClick={handleCheckUpdate} disabled={checking}>
+								{checking ? "Checking..." : "Check"}
+							</Button>
+						</div>
+						{update && (
+							<Button size="sm" variant="default" onClick={handleDownloadInstall} disabled={installing} className="w-full mt-2">
+								{installing ? "Installing..." : `Install v${update.version}`}
+							</Button>
+						)}
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="pb-2">
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Github className="w-4 h-4" />
-							Source Code
-						</CardTitle>
+						<CardTitle className="text-base">Behavior</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<p className="text-sm text-muted-foreground">
-							Check out the project on GitHub for updates and source code.
-						</p>
-						<a
-							href="https://github.com/sivir/crystal"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
-						>
-							github.com/sivir/crystal
-						</a>
+						<div className="flex items-start gap-3">
+							<Checkbox
+								id="close-button-exits-app"
+								checked={close_button_exits_app}
+								onCheckedChange={(checked) => set_close_button_exits_app(checked === true)}
+							/>
+							<div>
+								<Label htmlFor="close-button-exits-app" className="cursor-pointer text-sm">
+									Close button exits app
+								</Label>
+								<p className="text-xs text-muted-foreground">
+									When disabled, clicking the close button hides Crystal to the system tray instead of fully closing it.
+								</p>
+							</div>
+						</div>
 					</CardContent>
 				</Card>
 			</div>
-
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-base">Updates</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-sm">Current Version: v{version}</p>
-							{checking ? (
-								<p className="text-xs text-muted-foreground">Checking for updates...</p>
-							) : latestVersion ? (
-								<p className="text-xs text-muted-foreground">
-									{latestVersion === version ? "You are up to date!" : `Latest version: v${latestVersion}`}
-								</p>
-							) : (
-								<p className="text-xs text-muted-foreground">Click below to check for updates.</p>
-							)}
-						</div>
-						<Button size="sm" onClick={handleCheckUpdate} disabled={checking}>
-							{checking ? "Checking..." : "Check"}
-						</Button>
-					</div>
-					{update && (
-						<Button size="sm" variant="default" onClick={handleDownloadInstall} disabled={installing} className="w-full mt-2">
-							{installing ? "Installing..." : `Install v${update.version}`}
-						</Button>
-					)}
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-base">Behavior</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-start gap-3">
-						<Checkbox
-							id="close-button-exits-app"
-							checked={close_button_exits_app}
-							onCheckedChange={(checked) => set_close_button_exits_app(checked === true)}
-						/>
-						<div>
-							<Label htmlFor="close-button-exits-app" className="cursor-pointer text-sm">
-								Close button exits app
-							</Label>
-							<p className="text-xs text-muted-foreground">
-								When disabled, clicking the close button hides Crystal to the system tray instead of fully closing it.
-							</p>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
 
 			<Card>
 				<CardHeader className="pb-2">
@@ -171,17 +134,6 @@ export default function Settings() {
 						<Input value={other_queues.join(", ")} onChange={e => set_other_queues(e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)))} />
 						<p className="text-xs text-muted-foreground mt-0.5">Treated like the current ARURF mode (champion swapping)</p>
 					</div>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-base">Disclaimer</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<p className="text-xs text-muted-foreground">
-						Crystal isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
-					</p>
 				</CardContent>
 			</Card>
 		</div>

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAppStore } from "@/store";
 
-export type page_name = "home" | "mastery" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug" | "user";
+export type page_name = "home" | "mastery" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug" | "user" | "about";
 
 export type APIMasteryDataEntry = {
 	championId: number;
