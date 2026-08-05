@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { load } from "@tauri-apps/plugin-store";
 import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIRiotData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
-import { lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
+import { is_mastery_champion, is_standard_champion, format_champion_name, lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
 import { setLoading } from "@/lib/loading_state.ts";
 
 import "./style.css";
@@ -136,7 +136,7 @@ export function refresh_eternals(setStaticData: React.Dispatch<React.SetStateAct
 		return;
 	}
 
-	const champion_ids = Object.keys(static_data.champion_map);
+	const champion_ids = Object.keys(static_data.champion_map).filter(id => is_standard_champion(parseInt(id)));
 	if (champion_ids.length === 0) {
 		console.log("no champion map, skipping eternals refresh");
 		return;
@@ -375,7 +375,15 @@ export default function App() {
 		console.log("init");
 
 		invoke<APIChampionSummary[]>("http_request", { url: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-summary.json" }).then(x => {
-			const champion_map = Object.fromEntries(x.filter(c => c.id > 0 && c.id < 3000).map(c => [c.id, c]));
+			const list = Array.isArray(x) ? x : [];
+			const champion_map = Object.fromEntries(
+				list
+					.filter(c => is_mastery_champion(Number(c.id)))
+					.map(c => {
+						const id = Number(c.id);
+						return [id, { ...c, id, name: format_champion_name(String(c.name ?? ""), id) }];
+					})
+			);
 			setStaticData(prev => ({ ...prev, champion_map }));
 		});
 

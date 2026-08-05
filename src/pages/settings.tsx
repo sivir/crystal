@@ -95,20 +95,20 @@ export default function Settings() {
 						<CardTitle className="text-base">Behavior</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="flex items-start gap-3">
-							<Checkbox
-								id="close-button-exits-app"
-								checked={close_button_exits_app}
-								onCheckedChange={(checked) => set_close_button_exits_app(checked === true)}
-							/>
-							<div>
+						<div className="space-y-1">
+							<div className="flex items-center gap-3">
+								<Checkbox
+									id="close-button-exits-app"
+									checked={close_button_exits_app}
+									onCheckedChange={(checked) => set_close_button_exits_app(checked === true)}
+								/>
 								<Label htmlFor="close-button-exits-app" className="cursor-pointer text-sm">
 									Close button exits app
 								</Label>
-								<p className="text-xs text-muted-foreground">
-									When disabled, clicking the close button hides Crystal to the system tray instead of fully closing it.
-								</p>
 							</div>
+							<p className="text-xs text-muted-foreground pl-7">
+								When disabled, clicking the close button hides Crystal to the system tray instead of fully closing it.
+							</p>
 						</div>
 					</CardContent>
 				</Card>
@@ -119,20 +119,21 @@ export default function Settings() {
 					<CardTitle className="text-base">Queue IDs</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-3">
+					find these on the top of the lobby page when you are in the lobby of an unsupported mode
 					<div>
 						<Label className="text-sm">ARAM modes</Label>
 						<Input value={aram_queues.join(", ")} onChange={e => set_aram_queues(e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)))} />
-						<p className="text-xs text-muted-foreground mt-0.5">Treated like the current ARAM / ARAM Mayhem modes</p>
+						<p className="text-xs text-muted-foreground mt-0.5">modes that you can get aram challenges on, and are all random</p>
 					</div>
 					<div>
 						<Label className="text-sm">Arena modes</Label>
 						<Input value={arena_queues.join(", ")} onChange={e => set_arena_queues(e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)))} />
-						<p className="text-xs text-muted-foreground mt-0.5">Shows completed champion challenges</p>
+						<p className="text-xs text-muted-foreground mt-0.5">modes with crowd favorites</p>
 					</div>
 					<div>
 						<Label className="text-sm">Other all-random modes</Label>
 						<Input value={other_queues.join(", ")} onChange={e => set_other_queues(e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)))} />
-						<p className="text-xs text-muted-foreground mt-0.5">Treated like the current ARURF mode (champion swapping)</p>
+						<p className="text-xs text-muted-foreground mt-0.5">modes that are all random but without challenges (like arurf)</p>
 					</div>
 				</CardContent>
 			</Card>

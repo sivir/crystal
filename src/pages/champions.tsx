@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { default_mastery_data, useStaticData } from "@/data_context.tsx";
-import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions } from "@/lib/utils.ts";
+import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions, is_standard_champion } from "@/lib/utils.ts";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 
@@ -45,7 +45,9 @@ export default function Champions() {
 	const [selected_regions, set_selected_regions] = usePersistedState<string[]>('champions.selected_regions', []);
 
 	useEffect(() => {
-		set_champion_table_data(Object.entries(static_data.champion_map).map(([id, champion]) => {
+		set_champion_table_data(Object.entries(static_data.champion_map)
+			.filter(([id]) => is_standard_champion(parseInt(id)))
+			.map(([id, champion]) => {
 			const current_mastery_data = static_data.mastery_data.find(x => x.championId === parseInt(id)) || default_mastery_data;
 			return {
 				name: champion.name,
@@ -225,7 +227,7 @@ export default function Champions() {
 										</div>
 									</TooltipTrigger>
 									<TooltipContent>
-										<p>{static_data.lcu_data[x]?.description ?? `Challenge ${x}`} ({static_data.lcu_data[x]?.completedIds?.length ?? 0} / {Object.keys(static_data.champion_map).length})</p>
+										<p>{static_data.lcu_data[x]?.description ?? `Challenge ${x}`} ({static_data.lcu_data[x]?.completedIds?.length ?? 0} / {Object.keys(static_data.champion_map).filter(id => is_standard_champion(parseInt(id))).length})</p>
 									</TooltipContent>
 								</Tooltip>
 							</TableHead>)}

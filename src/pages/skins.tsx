@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { SortDirection } from "@/lib/utils";
+import { SortDirection, is_standard_champion } from "@/lib/utils";
 import { SKIN_CHALLENGES } from "@/lib/challenges";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -100,7 +100,9 @@ export default function Skins() {
 	}, [all_skins]);
 
 	useEffect(() => {
-		const new_data = Object.entries(static_data.champion_map).map(([champion_id_str, champion]) => {
+		const new_data = Object.entries(static_data.champion_map)
+			.filter(([champion_id_str]) => is_standard_champion(parseInt(champion_id_str)))
+			.map(([champion_id_str, champion]) => {
 			const champion_id = parseInt(champion_id_str);
 			const champion_owned = owned_skins.filter(skin => skin.champion_id === champion_id);
 			const champion_all_loot = all_loot_skins.filter(skin => skin.champion_id === champion_id);
@@ -215,7 +217,7 @@ export default function Skins() {
 		let champions_5plus_after_loot = 0;
 		let max_champion_total = 0;
 
-		Object.keys(static_data.champion_map).forEach(champion_id => {
+		Object.keys(static_data.champion_map).filter(champion_id => is_standard_champion(parseInt(champion_id))).forEach(champion_id => {
 			const owned = champion_owned_counts.get(parseInt(champion_id)) || 0;
 			const loot = champion_loot_counts.get(parseInt(champion_id)) || 0;
 			const total = owned + loot;
@@ -265,7 +267,7 @@ export default function Skins() {
 
 		// champions_5plus essence calculation
 		const champion_upgrade_costs_5plus: number[] = [];
-		Object.keys(static_data.champion_map).forEach(champion_id_str => {
+		Object.keys(static_data.champion_map).filter(champion_id_str => is_standard_champion(parseInt(champion_id_str))).forEach(champion_id_str => {
 			const champion_id = parseInt(champion_id_str);
 			const owned = champion_owned_counts.get(champion_id) || 0;
 			if (owned >= 5) return;
@@ -282,7 +284,7 @@ export default function Skins() {
 
 		// champions_15plus essence calculation
 		const champion_upgrade_costs_15plus: number[] = [];
-		Object.keys(static_data.champion_map).forEach(champion_id_str => {
+		Object.keys(static_data.champion_map).filter(champion_id_str => is_standard_champion(parseInt(champion_id_str))).forEach(champion_id_str => {
 			const champion_id = parseInt(champion_id_str);
 			const owned = champion_owned_counts.get(champion_id) || 0;
 			if (owned >= 15) return;

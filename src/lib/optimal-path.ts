@@ -108,7 +108,8 @@ export function build_mastery_class_data(static_data: StaticData, has_lcu_data: 
 		const m10_challenge = static_data.lcu_data[m10_challenges[index]];
 		if (!m7_challenge || !m10_challenge) return null;
 
-		const champions = (m7_challenge.availableIds || []).filter(id => id <= 3000).map(id => {
+		const champions = (m7_challenge.availableIds || []).map(raw_id => {
+			const id = Number(raw_id);
 			const champ = static_data.champion_map[id];
 			const mastery = mastery_by_champion.get(id) || { ...default_mastery_data, championId: id };
 			const points_to_m7 = points_to_target_level(mastery.championLevel, mastery.championPointsUntilNextLevel, 7);

@@ -57,8 +57,40 @@ export async function lcu_put_request<t>(path: string, body: any) {
 	});
 }
 
+export function is_standard_champion(id: number) {
+	const n = Number(id);
+	return Number.isFinite(n) && n > 0 && n < 3000;
+}
+
+export function is_classic_champion(id: number) {
+	const n = Number(id);
+	return Number.isFinite(n) && n >= 60000 && n < 66000;
+}
+
+export function is_mastery_champion(id: number) {
+	const n = Number(id);
+	return is_standard_champion(n) || is_classic_champion(n);
+}
+
+/** Maps a classic champ id (e.g. 60001) to its base id (1), or returns the id if already standard. */
+export function to_standard_champion_id(id: number): number | null {
+	const n = Number(id);
+	if (is_standard_champion(n)) return n;
+	if (is_classic_champion(n)) {
+		const base = n - 60000;
+		return is_standard_champion(base) ? base : null;
+	}
+	return null;
+}
+
+export function format_champion_name(name: string, id: number) {
+	return is_classic_champion(id) ? `${name} (Classic)` : name;
+}
+
 export function champion_name(id: number, champion_map: APIChampionSummaryMap) {
-	return champion_map[id]?.name || `Champion ${id}`;
+	const name = champion_map[id]?.name;
+	if (name) return name;
+	return is_classic_champion(id) ? `Champion ${id} (Classic)` : `Champion ${id}`;
 }
 
 export const classes = ["Assassin", "Fighter", "Mage", "Marksman", "Support", "Tank"];

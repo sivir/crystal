@@ -1,7 +1,7 @@
 import { APILCUChallenge, useStaticData, default_mastery_data } from "@/data_context";
 import { useState, useMemo } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { challenge_icon, classes, globetrotter_regions } from "@/lib/utils";
+import { challenge_icon, classes, globetrotter_regions, is_standard_champion } from "@/lib/utils";
 import { VARIETYS_OVERRATED_CHALLENGE_ID as VARIETYS_OVERRATED_ID } from "@/lib/challenges";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,7 +29,7 @@ export default function TeamBuilder() {
 	};
 
 	const filtered_champions = useMemo(() => {
-		const all_champions = Object.values(static_data.champion_map);
+		const all_champions = Object.values(static_data.champion_map).filter(c => is_standard_champion(c.id));
 
 		if (selected_challenges.length === 0) {
 			return all_champions.map(c => ({ ...c, is_filtered: false }));

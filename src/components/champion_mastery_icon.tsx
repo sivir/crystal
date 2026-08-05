@@ -13,7 +13,7 @@ export function ChampionMasteryIcon({ data, className }: ChampionMasteryIconProp
 	const totalPointsNeeded = data.championPointsSinceLastLevel + Math.max(0, data.championPointsUntilNextLevel);
 	const progress = totalPointsNeeded > 0 ? (data.championPointsSinceLastLevel / totalPointsNeeded) * 100 : 100;
 	const optimal_path_ids = useOptimalPathIds();
-	const is_on_path = optimal_path_ids.has(data.championId);
+	const is_on_path = optimal_path_ids.has(Number(data.championId));
 
 	return (
 		<HoverCard openDelay={150} closeDelay={0}>

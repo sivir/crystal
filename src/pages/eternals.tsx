@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { SortDirection, classes } from "@/lib/utils";
+import { SortDirection, classes, is_standard_champion } from "@/lib/utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +55,9 @@ export default function Eternals() {
 	const [hide_completed, set_hide_completed] = usePersistedState<boolean>("eternals.hide_completed", false);
 
 	useEffect(() => {
-		const new_table_data = Object.entries(static_data.champion_map).map(([champion_id_str, champion]) => {
+		const new_table_data = Object.entries(static_data.champion_map)
+			.filter(([champion_id_str]) => is_standard_champion(parseInt(champion_id_str)))
+			.map(([champion_id_str, champion]) => {
 			const champion_id = parseInt(champion_id_str);
 			const eternals_series = static_data.eternals_map.get(champion_id);
 

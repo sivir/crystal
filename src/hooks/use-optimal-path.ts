@@ -23,7 +23,7 @@ export function OptimalPathProvider({ children }: { children: ReactNode }) {
 	const value = useMemo(() => {
 		const class_data = build_mastery_class_data(static_data, has_lcu_data);
 		const optimal_path = compute_optimal_paths(class_data);
-		const m10_path_ids = new Set(optimal_path?.m10.champions.map(champion => champion.id) ?? []);
+		const m10_path_ids = new Set(optimal_path?.m10.champions.map(champion => Number(champion.id)) ?? []);
 		return { class_data, optimal_path, m10_path_ids };
 	}, [has_lcu_data, static_data.lcu_data, static_data.mastery_data, static_data.champion_map]);
 
