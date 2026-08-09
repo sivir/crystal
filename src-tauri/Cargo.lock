@@ -637,7 +637,7 @@ dependencies = [
 
 [[package]]
 name = "crystal"
-version = "3.14.4"
+version = "3.14.5"
 dependencies = [
  "irelia",
  "reqwest 0.12.28",
