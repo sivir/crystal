@@ -2,12 +2,32 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
 import { SortDirection, is_standard_champion } from "@/lib/utils";
 import { SKIN_CHALLENGES } from "@/lib/challenges";
+import { usePersistedState } from "@/hooks/use-persisted-state";
+import { FilterDropdown } from "@/components/filter_dropdown";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const SKIN_RARITIES = [
+	"kNoRarity",
+	"kRare",
+	"kEpic",
+	"kLegendary",
+	"kMythic",
+	"kUltimate",
+	"kExalted",
+	"kTranscendent",
+] as const;
+
+function rarity_label(rarity: string) {
+	if (rarity === "kNoRarity") return "Regular";
+	return rarity.replace(/^k/, "");
+}
 
 type Skin = {
 	id: number;
@@ -57,6 +77,8 @@ export default function Skins() {
 	const [sort_key, set_sort_key] = useState<SortKey>("owned");
 	const [sort_direction, set_sort_direction] = useState<SortDirection>("desc");
 	const [table_data, set_table_data] = useState<ChampionSkinRow[]>([]);
+	const [selected_rarities, set_selected_rarities] = usePersistedState<string[]>("skins.selected_rarities", []);
+	const [legacy_only, set_legacy_only] = usePersistedState<boolean>("skins.legacy_only", false);
 
 	const all_skins = useMemo<Skin[]>(() => {
 		const loot_items = new Map<number, { storeItemId: number; upgradeEssenceValue?: number }>();
@@ -125,38 +147,61 @@ export default function Skins() {
 	}, [static_data.champion_map, all_skins, owned_skins, all_loot_skins, unowned_skins]);
 
 	const sorted_data = useMemo(() => {
-		return [...table_data].sort((a, b) => {
-			let comparison = 0;
+		const filters_active = selected_rarities.length > 0 || legacy_only;
+		const filter_skins = <T extends Skin>(skins: T[]) =>
+			skins.filter(skin => {
+				if (selected_rarities.length > 0 && !selected_rarities.includes(skin.rarity)) return false;
+				if (legacy_only && !skin.legacy) return false;
+				return true;
+			});
 
-			switch (sort_key) {
-				case "champion":
-					comparison = a.champion_name.localeCompare(b.champion_name);
-					break;
-				case "total":
-					comparison = a.total_skins - b.total_skins;
-					break;
-				case "owned":
-					comparison = a.owned_skins.length - b.owned_skins.length;
-					break;
-				case "loot":
-					comparison = a.loot_skins.length - b.loot_skins.length;
-					break;
-				case "unowned":
-					comparison = a.unowned_skins.length - b.unowned_skins.length;
-					break;
-				case "owned_plus_loot":
-					// Only count unowned loot skins
-					const a_unowned_loot = a.loot_skins.filter(s => !s.owned).length;
-					const b_unowned_loot = b.loot_skins.filter(s => !s.owned).length;
-					const a_total = a.owned_skins.length + a_unowned_loot;
-					const b_total = b.owned_skins.length + b_unowned_loot;
-					comparison = a_total - b_total;
-					break;
-			}
+		return [...table_data]
+			.map(row => {
+				const owned_skins = filter_skins(row.owned_skins);
+				const loot_skins = filter_skins(row.loot_skins);
+				const unowned_skins = filter_skins(row.unowned_skins);
+				return {
+					...row,
+					owned_skins,
+					loot_skins,
+					unowned_skins,
+					total_skins: owned_skins.length + unowned_skins.length,
+				};
+			})
+			.filter(row => !filters_active || row.total_skins > 0)
+			.sort((a, b) => {
+				let comparison = 0;
 
-			return sort_direction === "asc" ? comparison : -comparison;
-		});
-	}, [table_data, sort_key, sort_direction]);
+				switch (sort_key) {
+					case "champion":
+						comparison = a.champion_name.localeCompare(b.champion_name);
+						break;
+					case "total":
+						comparison = a.total_skins - b.total_skins;
+						break;
+					case "owned":
+						comparison = a.owned_skins.length - b.owned_skins.length;
+						break;
+					case "loot":
+						comparison = a.loot_skins.length - b.loot_skins.length;
+						break;
+					case "unowned":
+						comparison = a.unowned_skins.length - b.unowned_skins.length;
+						break;
+					case "owned_plus_loot": {
+						// Only count unowned loot skins
+						const a_unowned_loot = a.loot_skins.filter(s => !s.owned).length;
+						const b_unowned_loot = b.loot_skins.filter(s => !s.owned).length;
+						const a_total = a.owned_skins.length + a_unowned_loot;
+						const b_total = b.owned_skins.length + b_unowned_loot;
+						comparison = a_total - b_total;
+						break;
+					}
+				}
+
+				return sort_direction === "asc" ? comparison : -comparison;
+			});
+	}, [table_data, sort_key, sort_direction, selected_rarities, legacy_only]);
 
 	const handle_sort = (key: SortKey) => {
 		if (sort_key === key) {
@@ -175,10 +220,13 @@ export default function Skins() {
 
 	const get_rarity_color = (rarity: string) => {
 		switch (rarity) {
+			case "kTranscendent": return "text-rose-500 dark:text-rose-400";
+			case "kExalted": return "text-amber-500 dark:text-amber-400";
 			case "kUltimate": return "text-orange-500 dark:text-orange-400";
 			case "kMythic": return "text-purple-500 dark:text-purple-400";
 			case "kLegendary": return "text-red-500 dark:text-red-400";
 			case "kEpic": return "text-blue-500 dark:text-blue-400";
+			case "kRare": return "text-sky-500 dark:text-sky-400";
 			default: return "text-gray-500 dark:text-gray-400";
 		}
 	};
@@ -515,6 +563,26 @@ export default function Skins() {
 				</Card>
 			)}
 
+			<div className="flex items-center gap-4 flex-wrap">
+				<FilterDropdown
+					title="Rarities"
+					items={[...SKIN_RARITIES]}
+					selected_items={selected_rarities}
+					set_selected_items={set_selected_rarities}
+					item_to_label={rarity_label}
+				/>
+				<div className="flex items-center gap-2">
+					<Checkbox
+						id="legacy-only"
+						checked={legacy_only}
+						onCheckedChange={(checked) => set_legacy_only(checked === true)}
+					/>
+					<Label htmlFor="legacy-only" className="text-sm cursor-pointer">
+						Legacy only
+					</Label>
+				</div>
+			</div>
+
 			<div className="rounded-md border">
 				<Table>
 					<TableHeader>
@@ -624,7 +692,7 @@ export default function Skins() {
 																	<span>{skin.name}</span>
 																	<div className="flex gap-2 items-center">
 																		<Badge variant="outline" className={get_rarity_color(skin.rarity)}>
-																			{skin.rarity}
+																			{rarity_label(skin.rarity)}
 																		</Badge>
 																		{skin.legacy && (
 																			<Badge variant="secondary" className="text-xs">Legacy</Badge>
@@ -644,7 +712,7 @@ export default function Skins() {
 																	<span className={skin.owned ? 'line-through' : ''}>{skin.name}</span>
 																	<div className="flex gap-2 items-center">
 																		<Badge variant="outline" className={get_rarity_color(skin.rarity)}>
-																			{skin.rarity}
+																			{rarity_label(skin.rarity)}
 																		</Badge>
 																		{skin.legacy && (
 																			<Badge variant="secondary" className="text-xs">Legacy</Badge>
@@ -667,7 +735,7 @@ export default function Skins() {
 																	<span>{skin.name}</span>
 																	<div className="flex gap-2 items-center">
 																		<Badge variant="outline" className={get_rarity_color(skin.rarity)}>
-																			{skin.rarity}
+																			{rarity_label(skin.rarity)}
 																		</Badge>
 																		{skin.legacy && (
 																			<Badge variant="secondary" className="text-xs">Legacy</Badge>
