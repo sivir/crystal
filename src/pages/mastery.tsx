@@ -50,11 +50,6 @@ type GoalTick = {
 	icon?: string;
 };
 
-function format_goal_tick(tick: GoalTick) {
-	if (tick.kind === "mastery") return tick.label;
-	return tick.level ? tick.level.charAt(0) + tick.level.slice(1).toLowerCase() : tick.label;
-}
-
 function format_goal_points(points: number) {
 	if (points === M5_POINTS) return "M5";
 	if (points === M7_POINTS) return "M7";
@@ -319,7 +314,7 @@ export default function Mastery() {
 	const path_champion_count = m10_path_ids.size + m10_or_above_count;
 
 	return (
-		<div className="p-6 space-y-6"> 
+		<div className="p-6 space-y-6">
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<Card>
 					<CardHeader>
@@ -383,10 +378,10 @@ export default function Mastery() {
 														}
 													/>
 													<XAxis dataKey="name" interval={0} />
-													<YAxis 
-														width={20} 
-														ticks={m7_thresholds.filter((value: any) => value >= m10_current)} 
-														domain={[0, m7_max]} 
+													<YAxis
+														width={20}
+														ticks={m7_thresholds.filter((value: any) => value >= m10_current)}
+														domain={[0, m7_max]}
 														interval={0}
 														tick={(props: any) => {
 															const { payload } = props;
@@ -426,7 +421,7 @@ export default function Mastery() {
 							)}
 					</CardContent>
 				</Card>
-				
+
 				<Card>
 					<CardContent className="pt-6">
 						<div className="grid grid-cols-2 gap-3">
