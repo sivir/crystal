@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { challenge_icon, classes, get_champion_region, get_level_color, get_progress_color, is_classic_champion, is_mastery_champion, is_standard_champion, regions, to_standard_champion_id, cn } from "@/lib/utils";
+import { challenge_icon, challenge_level_icon, classes, get_champion_region, get_level_color, get_progress_color, is_classic_champion, is_mastery_champion, is_standard_champion, levels, regions, to_standard_champion_id, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, ResponsiveContainer, Text, XAxis, YAxis } from "recharts";
@@ -8,30 +8,147 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { levels } from "@/lib/utils";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOptimalPath } from "@/hooks/use-optimal-path";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { default_mastery_data } from "@/data_context";
 
 import {
 	M7_CHALLENGES as m7_challenges,
 	M10_CHALLENGES as m10_challenges,
 	MASTERY_HEADLINE_CHALLENGES,
+	CATCH_EM_ALL_CHALLENGE_ID,
 } from "@/lib/challenges";
+
+const MASTERY_PER_LEVEL = [0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000];
+const M5_POINTS = MASTERY_PER_LEVEL.slice(0, 5).reduce((sum, pts) => sum + pts, 0);
+const M7_POINTS = MASTERY_PER_LEVEL.slice(0, 7).reduce((sum, pts) => sum + pts, 0);
+const M10_POINTS = MASTERY_PER_LEVEL.slice(0, 10).reduce((sum, pts) => sum + pts, 0);
+const DEFAULT_CATCH_EM_ALL_THRESHOLDS: { level: string; value: number }[] = [
+	{ level: "IRON", value: 100 },
+	{ level: "BRONZE", value: 500 },
+	{ level: "SILVER", value: 1000 },
+	{ level: "GOLD", value: 5000 },
+	{ level: "PLATINUM", value: 10000 },
+	{ level: "DIAMOND", value: 50000 },
+	{ level: "MASTER", value: 100000 },
+	{ level: "GRANDMASTER", value: 107500 },
+	{ level: "CHALLENGER", value: 115000 },
+];
+
+type GoalTick = {
+	points: number;
+	kind: "catch" | "mastery";
+	level?: string;
+	label: string;
+	icon?: string;
+};
+
+function format_goal_tick(tick: GoalTick) {
+	if (tick.kind === "mastery") return tick.label;
+	return tick.level ? tick.level.charAt(0) + tick.level.slice(1).toLowerCase() : tick.label;
+}
+
+function format_goal_points(points: number) {
+	if (points === M5_POINTS) return "M5";
+	if (points === M7_POINTS) return "M7";
+	if (points === M10_POINTS) return "M10";
+	if (points >= 1000) {
+		return points % 1000 === 0
+			? `${(points / 1000).toLocaleString()}k`
+			: `${(points / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k`;
+	}
+	return points.toLocaleString();
+}
+
+type GoalMode = "max" | "next" | "custom";
+type MasteryFilter = "none" | "m5" | "m7" | "m10" | "custom";
+type ChampionTypeFilter = "all" | "classic" | "non_classic";
 
 export default function Mastery() {
 	const { static_data, has_lcu_data } = useStaticData();
-	const { class_data, optimal_path, m10_path_ids } = useOptimalPath();
-	const [selected_class, set_selected_class] = useState("all");
-	const [selected_region, set_selected_region] = useState("all");
-	const [mastery_filter, set_mastery_filter] = useState<"none" | "m5" | "m7" | "m10" | "custom">("none");
-	const [custom_mastery_points, set_custom_mastery_points] = useState("100000");
-	const [search, set_search] = useState("");
-	const [goal_mode, set_goal_mode] = useState<"max" | "m10" | "m7" | "m5" | "next">("next");
+	const { class_data, optimal_path, m7_path_ids, m10_path_ids } = useOptimalPath();
+	const [selected_class, set_selected_class] = usePersistedState("mastery.selected_class", "all");
+	const [selected_region, set_selected_region] = usePersistedState("mastery.selected_region", "all");
+	const [mastery_filter, set_mastery_filter] = usePersistedState<MasteryFilter>("mastery.mastery_filter", "none");
+	const [custom_mastery_points, set_custom_mastery_points] = usePersistedState("mastery.custom_mastery_points", "100000");
+	const [search, set_search] = usePersistedState("mastery.search", "");
+	const [goal_mode, set_goal_mode] = usePersistedState<GoalMode>("mastery.goal_mode", "max");
+	const [show_m7_path, set_show_m7_path] = usePersistedState("mastery.show_m7_path", false);
+	const [show_m10_path, set_show_m10_path] = usePersistedState("mastery.show_m10_path", false);
+	const [champion_type, set_champion_type] = usePersistedState<ChampionTypeFilter>("mastery.champion_type", "all");
+	const [custom_goal_points, set_custom_goal_points] = usePersistedState("mastery.custom_goal_points", 100000);
+	const [custom_goal_input, set_custom_goal_input] = useState("100000");
+
+	useEffect(() => {
+		set_custom_goal_input(String(custom_goal_points));
+	}, [custom_goal_points]);
+
+	const goal_ticks = useMemo<GoalTick[]>(() => {
+		const catch_em_all = has_lcu_data ? static_data.lcu_data[CATCH_EM_ALL_CHALLENGE_ID] : null;
+		const catch_ranks = (catch_em_all
+			? levels
+				.filter(level => catch_em_all.thresholds[level]?.value != null && catch_em_all.thresholds[level].value > 0)
+				.map(level => ({ level, value: catch_em_all.thresholds[level].value }))
+			: DEFAULT_CATCH_EM_ALL_THRESHOLDS
+		).map(({ level, value }): GoalTick => ({
+			points: value,
+			kind: "catch",
+			level,
+			label: level.charAt(0) + level.slice(1).toLowerCase(),
+			icon: challenge_level_icon(catch_em_all, level, CATCH_EM_ALL_CHALLENGE_ID),
+		}));
+
+		const mastery_ticks: GoalTick[] = [
+			{ points: M5_POINTS, kind: "mastery", label: "M5" },
+			{ points: M7_POINTS, kind: "mastery", label: "M7" },
+			{ points: M10_POINTS, kind: "mastery", label: "M10" },
+		];
+
+		return [...catch_ranks, ...mastery_ticks].sort((a, b) => a.points - b.points || a.label.localeCompare(b.label));
+	}, [static_data.lcu_data, has_lcu_data]);
+
+	const selected_goal_tick = useMemo(
+		() => goal_ticks.find(tick => tick.points === custom_goal_points),
+		[goal_ticks, custom_goal_points],
+	);
+
+	const slider_goal_index = useMemo(() => {
+		if (goal_ticks.length === 0) return 0;
+		const exact = goal_ticks.findIndex(tick => tick.points === custom_goal_points);
+		if (exact >= 0) return exact;
+		let best = 0;
+		let best_dist = Math.abs(goal_ticks[0].points - custom_goal_points);
+		for (let i = 1; i < goal_ticks.length; i++) {
+			const dist = Math.abs(goal_ticks[i].points - custom_goal_points);
+			if (dist < best_dist) {
+				best = i;
+				best_dist = dist;
+			}
+		}
+		return best;
+	}, [goal_ticks, custom_goal_points]);
+
+	const set_goal_from_tick = (index: number) => {
+		const tick = goal_ticks[index];
+		if (!tick) return;
+		set_custom_goal_points(tick.points);
+		set_custom_goal_input(String(tick.points));
+	};
+
+	const set_goal_from_input = (raw: string) => {
+		set_custom_goal_input(raw);
+		const parsed = Number(raw.replace(/,/g, ""));
+		if (Number.isFinite(parsed) && parsed > 0) {
+			set_custom_goal_points(Math.floor(parsed));
+		}
+	};
 
 	const class_champion_ids = useMemo(() => {
 		const map = new Map<string, number[]>();
@@ -95,21 +212,15 @@ export default function Mastery() {
 
 	const champion_targets = useMemo(() => {
 		const targets = new Map<number, { progress: number; label: string }>();
-		const mp = [0, 1800, 4200, 6600, 9000, 10000, 11000, 11000, 11000];
-		const total_to = (lvl: number) => {
-			let s = 0;
-			for (let i = 0; i < lvl; i++) s += mp[i] ?? 11000;
-			return s;
-		};
 		const set_next = (champ: typeof all_champions[number]) => {
 			const pts = champ.mastery_points;
 			const remaining = champ.points_until_next;
 			if (remaining == null || remaining <= 0) {
-				// Unplayed champs default to 0 until-next; show 0/0 instead of MAX
+				// Unplayed champs default to 0 until-next; otherwise show current level (not MAX)
 				if (pts === 0) {
 					targets.set(champ.id, { progress: 0, label: "0/0" });
 				} else {
-					targets.set(champ.id, { progress: 1, label: "MAX" });
+					targets.set(champ.id, { progress: 1, label: `M${champ.mastery_level}` });
 				}
 			} else {
 				const target = pts + remaining;
@@ -121,13 +232,11 @@ export default function Mastery() {
 			for (const champ of all_champions) set_next(champ);
 			return targets;
 		}
-		if (goal_mode === "m5" || goal_mode === "m7" || goal_mode === "m10") {
-			const level = goal_mode === "m5" ? 5 : goal_mode === "m7" ? 7 : 10;
-			const total = total_to(level);
+		if (goal_mode === "custom") {
 			for (const champ of all_champions) {
 				targets.set(champ.id, {
-					progress: Math.min(champ.mastery_points / total, 1),
-					label: goal_mode.toUpperCase(),
+					progress: Math.min(champ.mastery_points / custom_goal_points, 1),
+					label: format_goal_points(custom_goal_points),
 				});
 			}
 			return targets;
@@ -152,14 +261,17 @@ export default function Mastery() {
 			}
 		});
 		return targets;
-	}, [all_champions, goal_mode, optimal_path, m10_path_ids]);
+	}, [all_champions, goal_mode, custom_goal_points, optimal_path, m10_path_ids]);
 
 	const filtered_champions = useMemo(() => {
 		const class_ids = selected_class === "all" ? null : class_champion_ids.get(selected_class);
 		const custom_pts = Number(custom_mastery_points) || 0;
 		const search_lower = search.trim().toLowerCase();
+		const path_filter_active = show_m7_path || show_m10_path;
 
 		return all_champions.filter(champ => {
+			if (champion_type === "classic" && !champ.is_classic) return false;
+			if (champion_type === "non_classic" && champ.is_classic) return false;
 			if (selected_class !== "all") {
 				if (class_ids && !class_ids.includes(champ.id)) return false;
 			}
@@ -169,9 +281,14 @@ export default function Mastery() {
 			if (mastery_filter === "m10" && champ.mastery_level >= 10) return false;
 			if (mastery_filter === "custom" && champ.mastery_points >= custom_pts) return false;
 			if (search_lower && !champ.name.toLowerCase().includes(search_lower)) return false;
+			if (path_filter_active) {
+				const on_m7 = show_m7_path && m7_path_ids.has(champ.id);
+				const on_m10 = show_m10_path && m10_path_ids.has(champ.id);
+				if (!on_m7 && !on_m10) return false;
+			}
 			return true;
 		});
-	}, [all_champions, selected_class, selected_region, class_champion_ids, mastery_filter, custom_mastery_points, search]);
+	}, [all_champions, champion_type, selected_class, selected_region, class_champion_ids, mastery_filter, custom_mastery_points, search, show_m7_path, show_m10_path, m7_path_ids, m10_path_ids]);
 
 	const all_progress_items = useMemo(() => {
 		return class_data.flatMap(data => [
@@ -307,104 +424,6 @@ export default function Mastery() {
 									</div>
 								</div>
 							)}
-
-						{optimal_path && (
-							<div className="grid grid-cols-2 gap-1.5">
-								{([['m7', 'M7', optimal_path.m7] as const, ['m10', 'M10', optimal_path.m10] as const]).map(([key, label, path]) => {
-									if (!path || path.champions.length === 0) return null;
-									return (
-										<Dialog key={key}>
-											<DialogTrigger asChild>
-												<div className="p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors group">
-													<div className="flex items-center justify-between">
-														<span className="text-xs font-semibold group-hover:text-foreground transition-colors">Optimal {label} Path</span>
-														<div className="flex items-center gap-1.5">
-															{path.impossible_classes.length > 0 && (
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<Badge variant="outline" className="text-amber-500 border-amber-500/50 gap-0.5 text-[9px] px-1 py-0">
-																			<AlertTriangle className="w-2.5 h-2.5" />
-																			{path.impossible_classes.join(", ")}
-																		</Badge>
-																	</TooltipTrigger>
-																	<TooltipContent>
-																		<p>Not enough champions to reach Master tier — all eligible included</p>
-																	</TooltipContent>
-																</Tooltip>
-															)}
-															<span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">→</span>
-														</div>
-													</div>
-													<div className="text-[10px] text-muted-foreground mt-0.5">
-														{path.total_champions} champs{path.dual_class_count > 0 && ` · ${path.dual_class_count} dual-class`}
-													</div>
-													<div className="text-[10px] text-muted-foreground">
-														{path.total_points.toLocaleString()} pts needed
-													</div>
-												</div>
-											</DialogTrigger>
-											<DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-												<DialogHeader>
-													<DialogTitle>Optimal {label} Path to Master Tier</DialogTitle>
-												</DialogHeader>
-												<div className="space-y-4 pt-2">
-													<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-														{path.class_needs.map(cn => (
-															<div key={cn.class_name} className="p-2 border rounded-md text-xs space-y-0.5">
-																<div className="flex items-center justify-between">
-																	<span className="font-medium">{cn.class_name}</span>
-																	{cn.impossible && <AlertTriangle className="w-3 h-3 text-amber-500" />}
-																</div>
-																<div className="text-muted-foreground">
-																	Need {cn.remaining} more{cn.impossible && ` (${cn.original_remaining} needed, only ${cn.total_in_class} exist)`}
-																</div>
-															</div>
-														))}
-													</div>
-
-													<Separator />
-
-													<div className="flex flex-wrap gap-4 text-sm">
-														<div><span className="text-muted-foreground">Champions:</span> <span className="font-medium">{path.total_champions}</span></div>
-														<div><span className="text-muted-foreground">Total pts:</span> <span className="font-medium">{path.total_points.toLocaleString()}</span></div>
-														<div><span className="text-muted-foreground">Dual-class:</span> <span className="font-medium">{path.dual_class_count}</span></div>
-														<div className="flex items-center gap-1">
-															<CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-															<span className="text-muted-foreground">= higher mastery than all non-path champs in class</span>
-														</div>
-													</div>
-
-													<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-														{path.champions.map(champ => (
-															<div key={champ.id} className={`p-2 rounded-md border bg-card flex items-center gap-2 ${champ.higher_than_all ? 'border-green-500/30' : 'border-amber-500/30'}`}>
-																<ChampionMasteryIcon data={champ.mastery} className="w-8 h-8 shrink-0" />
-																<div className="flex-1 min-w-0">
-																	<div className="flex items-center gap-1">
-																		<span className="font-medium truncate text-xs">{champ.name}</span>
-																		{champ.higher_than_all
-																			? <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
-																			: <Tooltip><TooltipTrigger asChild><AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 cursor-help" /></TooltipTrigger><TooltipContent><p>A non-path champion in the same class has higher mastery</p></TooltipContent></Tooltip>
-																		}
-																	</div>
-																	<div className="flex items-center gap-1 mt-0.5">
-																		{champ.classes_contributed.map(cls => (
-																			<Badge key={cls} variant="outline" className="text-[8px] px-1 py-0 leading-tight">{cls}</Badge>
-																		))}
-																	</div>
-																	<div className="text-[10px] text-primary font-medium font-mono mt-0.5">
-																		{champ.points_needed.toLocaleString()} pts to {label}
-																	</div>
-																</div>
-															</div>
-														))}
-													</div>
-												</div>
-											</DialogContent>
-										</Dialog>
-									);
-								})}
-							</div>
-						)}
 					</CardContent>
 				</Card>
 				
@@ -554,71 +573,176 @@ export default function Mastery() {
 
 			{/* Champion Mastery List */}
 			<div className="space-y-3">
-				<div className="flex items-center justify-between gap-2 flex-wrap">
-					<div className="flex items-center gap-2 flex-wrap">
-						<Select value={selected_class} onValueChange={set_selected_class}>
-							<SelectTrigger className="w-[140px]">
-								<SelectValue placeholder="Class" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All Classes</SelectItem>
-								{classes.map(c => (
-									<SelectItem key={c} value={c}>{c}</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<Select value={selected_region} onValueChange={set_selected_region} disabled={!has_lcu_data}>
-							<SelectTrigger className="w-[140px]">
-								<SelectValue placeholder="Region" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All Regions</SelectItem>
-								{regions.map(r => (
-									<SelectItem key={r} value={r}>{r}</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<Select value={mastery_filter} onValueChange={(v) => set_mastery_filter(v as "none" | "m5" | "m7" | "m10" | "custom")}>
-							<SelectTrigger className="w-[140px]">
-								<SelectValue placeholder="Hide above" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="none">Show all</SelectItem>
-								<SelectItem value="m5">Hide M5+</SelectItem>
-								<SelectItem value="m7">Hide M7+</SelectItem>
-								<SelectItem value="m10">Hide M10+</SelectItem>
-								<SelectItem value="custom">Hide above pts</SelectItem>
-							</SelectContent>
-						</Select>
-						{mastery_filter === "custom" && (
+				<div className="space-y-2">
+					<div className="flex items-center justify-between gap-2 flex-wrap">
+						<div className="flex items-center gap-2 flex-wrap">
 							<Input
-								type="number"
-								value={custom_mastery_points}
-								onChange={(e) => set_custom_mastery_points(e.target.value)}
-								className="w-[110px] h-9"
-								placeholder="Points"
+								value={search}
+								onChange={(e) => set_search(e.target.value)}
+								className="w-[180px] h-9"
+								placeholder="Search champions..."
 							/>
-						)}
-						<Input
-							value={search}
-							onChange={(e) => set_search(e.target.value)}
-							className="w-[180px] h-9"
-							placeholder="Search champions..."
-						/>
-						<Select value={goal_mode} onValueChange={(v) => set_goal_mode(v as "max" | "m10" | "m7" | "m5" | "next")}>
+							<Select value={selected_class} onValueChange={set_selected_class}>
+								<SelectTrigger className="w-[140px]">
+									<SelectValue placeholder="Class" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Classes</SelectItem>
+									{classes.map(c => (
+										<SelectItem key={c} value={c}>{c}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Select value={selected_region} onValueChange={set_selected_region} disabled={!has_lcu_data}>
+								<SelectTrigger className="w-[140px]">
+									<SelectValue placeholder="Region" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Regions</SelectItem>
+									{regions.map(r => (
+										<SelectItem key={r} value={r}>{r}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Select value={mastery_filter} onValueChange={(v) => set_mastery_filter(v as MasteryFilter)}>
+								<SelectTrigger className="w-[140px]">
+									<SelectValue placeholder="Hide above" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">Show all</SelectItem>
+									<SelectItem value="m5">Hide M5+</SelectItem>
+									<SelectItem value="m7">Hide M7+</SelectItem>
+									<SelectItem value="m10">Hide M10+</SelectItem>
+									<SelectItem value="custom">Hide above pts</SelectItem>
+								</SelectContent>
+							</Select>
+							{mastery_filter === "custom" && (
+								<Input
+									type="number"
+									value={custom_mastery_points}
+									onChange={(e) => set_custom_mastery_points(e.target.value)}
+									className="w-[110px] h-9"
+									placeholder="Points"
+								/>
+							)}
+						</div>
+						<Select value={goal_mode} onValueChange={(v) => set_goal_mode(v as GoalMode)}>
 							<SelectTrigger className="w-[120px]">
 								<SelectValue placeholder="Goal" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="max">Max Goal</SelectItem>
-								<SelectItem value="m10">M10</SelectItem>
-								<SelectItem value="m7">M7</SelectItem>
-								<SelectItem value="m5">M5</SelectItem>
+								<SelectItem value="custom">Custom</SelectItem>
 								<SelectItem value="next">Next Level</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
-					<span className="text-xs text-muted-foreground">{filtered_champions.length} champions</span>
+
+					{goal_mode === "custom" && goal_ticks.length > 0 && (
+						<div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
+							<div className="flex items-center justify-between gap-2 text-xs">
+								<span className="text-muted-foreground">Custom goal</span>
+								<div className="flex items-center gap-2">
+									{selected_goal_tick?.icon && (
+										<img src={selected_goal_tick.icon} alt="" className="w-4 h-4 shrink-0 object-cover rounded-full" />
+									)}
+									<span className="font-medium">{format_goal_points(custom_goal_points)}</span>
+									<Input
+										type="number"
+										min={1}
+										value={custom_goal_input}
+										onChange={(e) => set_goal_from_input(e.target.value)}
+										className="w-[110px] h-7 text-xs"
+										placeholder="Points"
+									/>
+								</div>
+							</div>
+							{/* Outer pad keeps edge icons circular; tick row matches thumb travel so the bar reaches the end ticks */}
+							<div className="px-2.5 overflow-visible">
+								<input
+									type="range"
+									min={0}
+									max={goal_ticks.length - 1}
+									step={1}
+									value={slider_goal_index}
+									onChange={(e) => set_goal_from_tick(Number(e.target.value))}
+									className="custom-goal-slider w-full"
+								/>
+								<div className="relative h-10 mt-1 mx-1.5 overflow-visible">
+									{goal_ticks.map((tick, index) => {
+										const left = goal_ticks.length === 1 ? 50 : (index / (goal_ticks.length - 1)) * 100;
+										const is_selected = selected_goal_tick?.points === tick.points;
+										return (
+											<Tooltip key={`${tick.kind}-${tick.points}-${tick.label}`}>
+												<TooltipTrigger asChild>
+													<button
+														type="button"
+														onClick={() => set_goal_from_tick(index)}
+														className={cn(
+															"absolute top-0 -translate-x-1/2 flex flex-col items-center gap-0.5 w-5",
+															is_selected ? "opacity-100" : "opacity-70 hover:opacity-100",
+														)}
+														style={{ left: `${left}%` }}
+													>
+														<span className={cn("h-2 w-0.5 rounded-full", is_selected ? "bg-primary" : "bg-muted-foreground/50")} />
+														{tick.icon ? (
+															<img
+																src={tick.icon}
+																alt={tick.label}
+																className={cn(
+																	"block w-5 h-5 shrink-0 object-cover rounded-full",
+																	is_selected && "ring-1 ring-primary",
+																)}
+															/>
+														) : (
+															<span className={cn("text-[9px] leading-none whitespace-nowrap", is_selected ? "text-primary" : "text-muted-foreground")}>
+																{tick.label}
+															</span>
+														)}
+													</button>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p>{tick.label} · {tick.points.toLocaleString()} pts</p>
+												</TooltipContent>
+											</Tooltip>
+										);
+									})}
+								</div>
+							</div>
+						</div>
+					)}
+
+					<div className="flex items-center gap-4 flex-wrap">
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="m7-path-filter"
+								checked={show_m7_path}
+								onCheckedChange={(checked) => set_show_m7_path(checked === true)}
+								disabled={!optimal_path}
+							/>
+							<Label htmlFor="m7-path-filter" className="text-sm cursor-pointer">
+								M7 path
+							</Label>
+						</div>
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="m10-path-filter"
+								checked={show_m10_path}
+								onCheckedChange={(checked) => set_show_m10_path(checked === true)}
+								disabled={!optimal_path}
+							/>
+							<Label htmlFor="m10-path-filter" className="text-sm cursor-pointer">
+								M10 path
+							</Label>
+						</div>
+						<Tabs value={champion_type} onValueChange={(v) => set_champion_type(v as ChampionTypeFilter)}>
+							<TabsList>
+								<TabsTrigger value="all">All</TabsTrigger>
+								<TabsTrigger value="classic">Classic</TabsTrigger>
+								<TabsTrigger value="non_classic">Non-classic</TabsTrigger>
+							</TabsList>
+						</Tabs>
+					</div>
 				</div>
 
 				<Separator />
@@ -628,22 +752,31 @@ export default function Mastery() {
 				) : (
 					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
 						{filtered_champions.map(champ => {
-							const is_on_path = m10_path_ids.has(Number(champ.id));
+							const is_on_m7_path = m7_path_ids.has(Number(champ.id));
+							const is_on_m10_path = m10_path_ids.has(Number(champ.id));
 							const ct = champion_targets.get(champ.id);
 							return (
 								<div key={champ.id} className={cn(
 									"p-2 rounded-md border bg-card text-card-foreground flex flex-col gap-1.5",
-									is_on_path ? "border-purple-500 ring-1 ring-purple-500/80" : "border-border",
+									is_on_m10_path ? "border-purple-500 ring-1 ring-purple-500/80" : is_on_m7_path ? "border-blue-500 ring-1 ring-blue-500/80" : "border-border",
 								)}>
 									<div className="flex items-center gap-2">
 										<ChampionMasteryIcon data={champ.mastery} className="w-8 h-8 shrink-0" />
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-1 min-w-0">
 												<span className="font-medium truncate text-xs">{champ.name}</span>
-												{is_on_path && (
+												{is_on_m7_path && (
 													<Tooltip>
 														<TooltipTrigger asChild>
-															<Badge variant="outline" className="text-[8px] px-1 py-0 leading-tight bg-purple-500 text-white border-transparent shrink-0">Path</Badge>
+															<Badge variant="outline" className="text-[8px] px-1 py-0 leading-tight bg-blue-500 text-white border-transparent shrink-0">M7</Badge>
+														</TooltipTrigger>
+														<TooltipContent><p>On M7 optimal path</p></TooltipContent>
+													</Tooltip>
+												)}
+												{is_on_m10_path && (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Badge variant="outline" className="text-[8px] px-1 py-0 leading-tight bg-purple-500 text-white border-transparent shrink-0">M10</Badge>
 														</TooltipTrigger>
 														<TooltipContent><p>On M10 optimal path</p></TooltipContent>
 													</Tooltip>

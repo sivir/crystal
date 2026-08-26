@@ -7,12 +7,14 @@ import { build_mastery_class_data, compute_optimal_paths } from "@/lib/optimal-p
 interface OptimalPathContextValue {
 	class_data: MasteryClassData[];
 	optimal_path: MasteryOptimalPaths | null;
+	m7_path_ids: Set<number>;
 	m10_path_ids: Set<number>;
 }
 
 const empty_value: OptimalPathContextValue = {
 	class_data: [],
 	optimal_path: null,
+	m7_path_ids: new Set<number>(),
 	m10_path_ids: new Set<number>(),
 };
 
@@ -23,8 +25,9 @@ export function OptimalPathProvider({ children }: { children: ReactNode }) {
 	const value = useMemo(() => {
 		const class_data = build_mastery_class_data(static_data, has_lcu_data);
 		const optimal_path = compute_optimal_paths(class_data);
+		const m7_path_ids = new Set(optimal_path?.m7.champions.map(champion => Number(champion.id)) ?? []);
 		const m10_path_ids = new Set(optimal_path?.m10.champions.map(champion => Number(champion.id)) ?? []);
-		return { class_data, optimal_path, m10_path_ids };
+		return { class_data, optimal_path, m7_path_ids, m10_path_ids };
 	}, [has_lcu_data, static_data.lcu_data, static_data.mastery_data, static_data.champion_map]);
 
 	return createElement(OptimalPathContext.Provider, { value }, children);

@@ -18,6 +18,17 @@ export async function supabase_invoke<t>(function_name: string, body: any) {
 
 export const levels = ["NONE", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
 
+export function challenge_level_icon(challenge: APILCUChallenge | undefined | null, level: string, id: number | null = null) {
+	const path = challenge?.levelToIconPath?.[level];
+	if (!path) {
+		if (id != null) {
+			return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/config/${id}/tokens/${level.toLowerCase()}.png`;
+		}
+		return "https://placehold.co/32?text=" + (level?.[0] ?? "?");
+	}
+	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${path.substring(40).toLowerCase()}`;
+}
+
 export function challenge_icon(challenge: APILCUChallenge, id: number | null = null) {
 	if (challenge == undefined || challenge.id < 10) {
 		return "https://placehold.co/32?text=" + id;
@@ -31,7 +42,7 @@ export function challenge_icon(challenge: APILCUChallenge, id: number | null = n
 			}
 		}
 	}
-	return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/challenges/${challenge.levelToIconPath[level].substring(40).toLowerCase()}`;
+	return challenge_level_icon(challenge, level, id ?? challenge.id);
 }
 
 export type SortDirection = "asc" | "desc";
