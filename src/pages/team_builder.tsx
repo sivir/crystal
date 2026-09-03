@@ -1,5 +1,5 @@
 import { APILCUChallenge, useStaticData, default_mastery_data } from "@/data_context";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { challenge_icon, classes, globetrotter_regions, is_standard_champion } from "@/lib/utils";
 import { VARIETYS_OVERRATED_CHALLENGE_ID as VARIETYS_OVERRATED_ID } from "@/lib/challenges";
@@ -15,6 +15,7 @@ import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 
 export default function TeamBuilder() {
 	const { static_data } = useStaticData();
+	const champion_list_ref = useRef<HTMLTextAreaElement>(null);
 	const [selected_challenges, set_selected_challenges] = useState<number[]>([]);
 	const [selected_role, set_selected_role] = useState<string>("Mage");
 	const [sort_method, set_sort_method] = useState<"name" | "mastery">("mastery");
@@ -136,6 +137,11 @@ export default function TeamBuilder() {
 		);
 	};
 
+	const copy_champion_list = async () => {
+		const text = champion_list_ref.current?.value ?? champion_list;
+		await writeText(text);
+	};
+
 	return (
 		<div className="flex h-[calc(100vh-5rem)] overflow-hidden">
 			<div className="flex-1 p-6 overflow-y-auto">
@@ -181,8 +187,13 @@ export default function TeamBuilder() {
 						</div>
 					</div>
 				</div>
-				<Textarea value={champion_list} readOnly className="flex-1" />
-				<Button onClick={() => writeText(champion_list)}><Copy className="h-4 w-4" />Copy to Clipboard</Button>
+				<Textarea ref={champion_list_ref} value={champion_list} readOnly className="flex-1" />
+				<Button
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={() => copy_champion_list()}
+				>
+					<Copy className="h-4 w-4" />Copy to Clipboard
+				</Button>
 			</div>
 		</div>
 	);

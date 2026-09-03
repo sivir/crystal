@@ -63,7 +63,7 @@ function format_goal_points(points: number) {
 }
 
 type GoalMode = "max" | "next" | "custom";
-type MasteryFilter = "none" | "m5" | "m7" | "m10" | "custom";
+type MasteryFilter = "none" | "m5" | "m7" | "m10" | "custom" | "goal";
 type ChampionTypeFilter = "all" | "classic" | "non_classic";
 
 export default function Mastery() {
@@ -275,6 +275,10 @@ export default function Mastery() {
 			if (mastery_filter === "m7" && champ.mastery_level >= 7) return false;
 			if (mastery_filter === "m10" && champ.mastery_level >= 10) return false;
 			if (mastery_filter === "custom" && champ.mastery_points >= custom_pts) return false;
+			if (mastery_filter === "goal") {
+				const ct = champion_targets.get(champ.id);
+				if (ct && ct.progress >= 1) return false;
+			}
 			if (search_lower && !champ.name.toLowerCase().includes(search_lower)) return false;
 			if (path_filter_active) {
 				const on_m7 = show_m7_path && m7_path_ids.has(champ.id);
@@ -283,7 +287,7 @@ export default function Mastery() {
 			}
 			return true;
 		});
-	}, [all_champions, champion_type, selected_class, selected_region, class_champion_ids, mastery_filter, custom_mastery_points, search, show_m7_path, show_m10_path, m7_path_ids, m10_path_ids]);
+	}, [all_champions, champion_type, selected_class, selected_region, class_champion_ids, mastery_filter, custom_mastery_points, champion_targets, search, show_m7_path, show_m10_path, m7_path_ids, m10_path_ids]);
 
 	const all_progress_items = useMemo(() => {
 		return class_data.flatMap(data => [
@@ -605,6 +609,7 @@ export default function Mastery() {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="none">Show all</SelectItem>
+									<SelectItem value="goal">Hide above goal</SelectItem>
 									<SelectItem value="m5">Hide M5+</SelectItem>
 									<SelectItem value="m7">Hide M7+</SelectItem>
 									<SelectItem value="m10">Hide M10+</SelectItem>
