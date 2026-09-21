@@ -305,3 +305,35 @@ export function useSessionData() {
 	const setSessionData = useAppStore(state => state.setSessionData);
 	return { session_data, setSessionData };
 }
+
+// Narrow selectors — subscribe to a single field so unrelated
+// static_data/session_data updates don't re-render the caller.
+// Zustand compares selector output with Object.is, so returning a
+// primitive (or stable reference) is what splits the subscriptions.
+export function useSetStaticData() {
+	return useAppStore(state => state.setStaticData);
+}
+
+export function useSetSessionData() {
+	return useAppStore(state => state.setSessionData);
+}
+
+export function useStaticPage() {
+	return useAppStore(state => state.static_data.page);
+}
+
+export function useConnected() {
+	return useAppStore(state => state.static_data.connected);
+}
+
+export function useLastUpdateTime() {
+	return useAppStore(state => state.static_data.last_update_time);
+}
+
+export function useGameflowPhase() {
+	return useAppStore(state => state.session_data.gameflow_session?.phase);
+}
+
+export function useHasLcuData() {
+	return useAppStore(state => Object.keys(state.static_data.lcu_data).length > 0);
+}

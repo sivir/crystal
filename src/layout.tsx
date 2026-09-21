@@ -1,6 +1,6 @@
 import { ReactElement } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useStaticData } from "@/data_context.tsx";
+import { useStaticPage } from "@/data_context.tsx";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { pages } from "@/pages_config"
 
@@ -12,7 +12,7 @@ import { X, Square, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Layout({ children }: { children: ReactElement }) {
-	const {static_data} = useStaticData();
+	const page = useStaticPage();
 	const [close_button_exits_app] = usePersistedState<boolean>("settings.close_button_exits_app", false);
 
 	const handle_close = async () => {
@@ -33,7 +33,7 @@ export default function Layout({ children }: { children: ReactElement }) {
 						<div className="flex items-center gap-2">
 							<SidebarTrigger className="-ml-1" />
 							<Separator orientation="vertical" className="mr-2 h-4" />
-							<span className="text-sm font-medium">{pages[static_data.page].title}</span>
+							<span className="text-sm font-medium">{pages[page]?.title ?? page}</span>
 						</div>
 						<div className="flex items-center gap-1">
 							<Button variant="ghost" className="rounded-full size-6 p-1" onClick={() => getCurrentWindow().minimize()}>

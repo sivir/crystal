@@ -1,19 +1,19 @@
+import { memo } from "react";
 import { cn, mastery_icon_color } from "@/lib/utils";
 import { APIMasteryDataEntry } from "@/data_context";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { ChampionDetailCard } from "@/components/champion_detail_card";
-import { useOptimalPathIds } from "@/hooks/use-optimal-path";
+import { useIsOnOptimalPath } from "@/hooks/use-optimal-path";
 
 interface ChampionMasteryIconProps {
 	data: APIMasteryDataEntry;
 	className?: string;
 }
 
-export function ChampionMasteryIcon({ data, className }: ChampionMasteryIconProps) {
+export const ChampionMasteryIcon = memo(function ChampionMasteryIcon({ data, className }: ChampionMasteryIconProps) {
 	const totalPointsNeeded = data.championPointsSinceLastLevel + Math.max(0, data.championPointsUntilNextLevel);
 	const progress = totalPointsNeeded > 0 ? (data.championPointsSinceLastLevel / totalPointsNeeded) * 100 : 100;
-	const optimal_path_ids = useOptimalPathIds();
-	const is_on_path = optimal_path_ids.has(Number(data.championId));
+	const is_on_path = useIsOnOptimalPath(Number(data.championId));
 
 	return (
 		<HoverCard openDelay={150} closeDelay={0}>
@@ -46,4 +46,4 @@ export function ChampionMasteryIcon({ data, className }: ChampionMasteryIconProp
 			</HoverCardContent>
 		</HoverCard>
 	);
-}
+});

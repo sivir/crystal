@@ -1,4 +1,5 @@
-import { useStaticData } from "@/data_context.tsx";
+import { useConnected, useLastUpdateTime, useSetStaticData } from "@/data_context.tsx";
+import { useAppStore } from "@/store";
 import { useLoading } from "@/lib/loading_state";
 import { useTheme } from "@/theme-provider.tsx";
 import { refresh_data, refresh_eternals } from "@/App.tsx";
@@ -35,7 +36,9 @@ function formatTimestamp(timestamp: number | null): string {
 }
 
 export function StatusBar() {
-	const { static_data, setStaticData } = useStaticData();
+	const connected = useConnected();
+	const last_update_time = useLastUpdateTime();
+	const setStaticData = useSetStaticData();
 	const { is_loading, loading_progress } = useLoading();
 	const [version, setVersion] = useState<string>("");
 	const [update, setUpdate] = useState<{ version: string; downloadAndInstall: () => Promise<void> } | null>(null);
@@ -77,14 +80,14 @@ export function StatusBar() {
 			{/* Left section: connection status + last update time */}
 			<div className="flex items-center gap-2">
 				<div className="flex items-center gap-1.5">
-					<div className={`h-2 w-2 rounded-full ${static_data.connected ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]"}`} />
-					<span className={static_data.connected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-						{static_data.connected ? "Connected" : "Disconnected"}
+					<div className={`h-2 w-2 rounded-full ${connected ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]"}`} />
+					<span className={connected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+						{connected ? "Connected" : "Disconnected"}
 					</span>
 				</div>
-				{static_data.last_update_time && (
+				{last_update_time && (
 					<span className="text-muted-foreground/60">
-						Updated {formatTimestamp(static_data.last_update_time)}
+						Updated {formatTimestamp(last_update_time)}
 					</span>
 				)}
 			</div>
@@ -95,7 +98,7 @@ export function StatusBar() {
 					variant="ghost"
 					size="icon"
 					className="h-6 w-6"
-					onClick={() => refresh_data(setStaticData, static_data)}
+					onClick={() => refresh_data(setStaticData, useAppStore.getState().static_data)}
 					title="Refresh data"
 				>
 					<RefreshCcw className={`h-3 w-3 ${is_loading ? "animate-spin" : ""}`} />
@@ -104,7 +107,7 @@ export function StatusBar() {
 					variant="ghost"
 					size="icon"
 					className="h-6 w-6"
-					onClick={() => refresh_eternals(setStaticData, static_data)}
+					onClick={() => refresh_eternals(setStaticData, useAppStore.getState().static_data)}
 					title="Refresh Eternals"
 				>
 					<Flame className={`h-3 w-3 ${is_loading ? "text-orange-400" : ""}`} />

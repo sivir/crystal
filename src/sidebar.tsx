@@ -1,6 +1,6 @@
 import { app } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import { useStaticData, useSessionData, page_name } from "@/data_context.tsx";
+import { useStaticPage, useGameflowPhase, useSetStaticData, page_name } from "@/data_context.tsx";
 import { pages, page_groups, PageGroup } from "@/pages_config"
 
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
@@ -30,8 +30,9 @@ async function app_icon(): Promise<string> {
 }
 
 export function AppSidebar() {
-	const { static_data, setStaticData } = useStaticData();
-	const { session_data } = useSessionData();
+	const page = useStaticPage();
+	const setStaticData = useSetStaticData();
+	const gameflow_phase = useGameflowPhase();
 	const [image_src, set_image_src] = useState<string>("");
 
 	useEffect(() => {
@@ -72,13 +73,13 @@ export function AppSidebar() {
 									<SidebarMenuItem key={key}>
 										<SidebarMenuButton
 											asChild
-											isActive={static_data.page === key}
+											isActive={page === key}
 											onClick={() => setStaticData(prev => ({ ...prev, page: key as page_name }))}
 										>
 											<a href={"#"}>
 												<item.icon />
 												<span>{item.title}</span>
-												{key == "lobby" && session_data.gameflow_session?.phase == "ChampSelect" && (
+												{key == "lobby" && gameflow_phase == "ChampSelect" && (
 													<Badge className="bg-green-400">In Lobby</Badge>
 												)}
 											</a>

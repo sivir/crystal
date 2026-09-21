@@ -98,7 +98,7 @@ function calc_totals(champions: MasteryClassChampion[], points_key: "points_to_m
 	return { possible: true, total, selected_ids: selected.map(champion => champion.id), champions_needed: needed, available: eligible.length };
 }
 
-export function build_mastery_class_data(static_data: StaticData, has_lcu_data: boolean): MasteryClassData[] {
+export function build_mastery_class_data(static_data: Pick<StaticData, "lcu_data" | "mastery_data" | "champion_map">, has_lcu_data: boolean): MasteryClassData[] {
 	if (!has_lcu_data) return [];
 
 	const mastery_by_champion = new Map(static_data.mastery_data.map(mastery => [mastery.championId, mastery]));
