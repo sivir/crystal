@@ -25,8 +25,9 @@ export function select_cheapest<T extends { id: number }>(
  * Whether a champion id is a real grind suggestion.
  * Drops: pure phantoms (no map entry, no mastery entry — e.g. test/mode
  * placeholder ids like 3147/66608 that Riot still lists in availableIds),
- * unplayed classic variants (separate queue you don't own), and odd ids
- * you have never played. Unplayed standard champs with map entries stay.
+ * and odd ids you have never played. Classic variants are still earnable,
+ * so unplayed ones with map entries stay. Unplayed standard champs with
+ * map entries stay.
  */
 export function is_grindable_champion(
 	id: number,
@@ -36,8 +37,7 @@ export function is_grindable_champion(
 ): boolean {
 	const played = level > 0 || points > 0;
 	if (!has_info && !played) return false;
-	if (is_classic_champion(id)) return played;
-	if (is_standard_champion(id)) return true;
+	if (is_standard_champion(id) || is_classic_champion(id)) return true;
 	return played;
 }
 
