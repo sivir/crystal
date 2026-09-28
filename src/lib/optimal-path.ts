@@ -2,6 +2,7 @@ import type { APILCUChallenge, APIMasteryDataEntry, StaticData } from "@/data_co
 import { default_mastery_data } from "@/data_context";
 import { M7_CHALLENGES as m7_challenges, M10_CHALLENGES as m10_challenges } from "@/lib/challenges";
 import { classes } from "@/lib/utils";
+import { is_grindable_champion } from "@/lib/challenge-value";
 
 export type OptimalPathTarget = "M7" | "M10";
 
@@ -111,7 +112,13 @@ export function build_mastery_class_data(static_data: Pick<StaticData, "lcu_data
 		const champions = (m7_challenge.availableIds || []).map(raw_id => {
 			const id = Number(raw_id);
 			const champ = static_data.champion_map[id];
-			const mastery = mastery_by_champion.get(id) || { ...default_mastery_data, championId: id };
+			const entry = mastery_by_champion.get(id);
+			const mastery = entry || { ...default_mastery_data, championId: id };
+			// Riot lists ids here that have no map entry and no mastery
+			// history (test/mode placeholders) — never real suggestions.
+			if (!is_grindable_champion(id, champ?.name != null || entry != null, mastery.championLevel, mastery.championPoints)) {
+				return null;
+			}
 			const points_to_m7 = points_to_target_level(mastery.championLevel, mastery.championPointsUntilNextLevel, 7);
 			const points_to_m10 = points_to_target_level(mastery.championLevel, mastery.championPointsUntilNextLevel, 10);
 
@@ -124,7 +131,7 @@ export function build_mastery_class_data(static_data: Pick<StaticData, "lcu_data
 				points_to_m10,
 				mastery,
 			};
-		});
+		}).filter((c): c is MasteryClassChampion => c !== null);
 
 		champions.sort((a, b) => a.mastery_level !== b.mastery_level ? b.mastery_level - a.mastery_level : b.mastery_points - a.mastery_points);
 
@@ -183,7 +190,17 @@ function compute_path(class_data: MasteryClassData[], target: OptimalPathTarget)
 	};
 
 	class_needs.forEach(class_need => {
-		if (class_need.impossible) class_need.eligible_ids.forEach(add_champion);
+		// An uncompletable track earns nothing, so only auto-add its champs
+		// when they also cover a still-needed completable track (dual-class
+		// reuse). Single-class champs for a dead track are pure waste.
+		if (!class_need.impossible) return;
+		class_need.eligible_ids.forEach(champion_id => {
+			const info = champ_map.get(champion_id);
+			if (!info) return;
+			const helps_possible = [...info.class_indices].some(class_index =>
+				!class_needs[class_index].impossible && remaining[class_index] > 0);
+			if (helps_possible) add_champion(champion_id);
+		});
 	});
 
 	while (remaining.some(class_remaining => class_remaining > 0)) {

@@ -24,6 +24,12 @@ export const M10_CHALLENGES = [401207, 401208, 401209, 401210, 401211, 401212];
 // mastery of your 150th highest for table highlighting
 export const CATCH_EM_ALL_CHALLENGE_ID = 401101;
 
+// single-pool mastery challenges (counts across all champions / points on one)
+export const MASTER_YOURSELF_CHALLENGE_ID = 401104; // M5 on different champions
+export const ONE_TRICK_CHALLENGE_ID = 401103; // mastery points on a single champion
+export const MASTER_ENEMY_LEGACY_CHALLENGE_ID = 401105; // M7 on different champions
+export const MASTER_ENEMY_CHALLENGE_ID = 401107; // M10 on different champions
+
 // general mastery progression challenges
 export const MASTERY_HEADLINE_CHALLENGES = [CATCH_EM_ALL_CHALLENGE_ID, 401104, 401102, 401105, 401103, 401107];
 
