@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStaticData } from "@/data_context";
-import { challenge_icon, challenge_level_icon, classes, get_champion_region, get_level_color, get_progress_color, is_classic_champion, is_mastery_champion, is_standard_champion, levels, regions, to_standard_champion_id, cn } from "@/lib/utils";
+import { challenge_icon, challenge_level_icon, classes, get_champion_region, get_level_color, get_progress_color, is_classic_champion, is_mastery_champion, levels, regions, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, ResponsiveContainer, Text, XAxis, YAxis } from "recharts";
@@ -219,12 +219,11 @@ export default function Mastery() {
 			.map(id => {
 				const champ = static_data.champion_map[id];
 				const mastery = mastery_by_champion.get(id) || { ...default_mastery_data, championId: id };
-				const region_id = to_standard_champion_id(id) ?? id;
 				return {
 					id,
 					name: champ?.name || (is_classic_champion(id) ? `Champion ${id} (Classic)` : `Champion ${id}`),
 					roles: champ_to_classes.get(id) ?? (champ?.roles ?? []).map(r => r.charAt(0).toUpperCase() + r.slice(1)),
-					region: has_lcu_data ? get_champion_region(region_id, static_data.lcu_data) : null,
+					region: has_lcu_data ? get_champion_region(id, static_data.lcu_data) : null,
 					mastery_level: mastery.championLevel,
 					mastery_points: mastery.championPoints,
 					points_until_next: mastery.championPointsUntilNextLevel,
@@ -269,7 +268,8 @@ export default function Mastery() {
 
 		// Max goal: top champ → One-Trick master threshold, next 149 → Catch'em All
 		// master threshold (live values with fallbacks); everyone else falls back
-		// to the next-level bar
+		// to the next-level bar. Classics compete on equal footing — both
+		// challenges count them.
 		for (const champ of all_champions) set_next(champ);
 		if (!optimal_path) return targets;
 		const path_ids = m10_path_ids;
@@ -281,8 +281,7 @@ export default function Mastery() {
 			? static_data.lcu_data[CATCH_EM_ALL_CHALLENGE_ID]?.thresholds["MASTER"]?.value
 			: null) ?? 100000;
 		const short_label = (n: number) => (n % 1000 === 0 ? `${n / 1000}k` : n.toLocaleString());
-		const standard = all_champions.filter(c => is_standard_champion(c.id));
-		const effective_sorted = [...standard].sort((a, b) => {
+		const effective_sorted = [...all_champions].sort((a, b) => {
 			const ea = path_ids.has(a.id) ? Math.max(a.mastery_points, m10_threshold) : a.mastery_points;
 			const eb = path_ids.has(b.id) ? Math.max(b.mastery_points, m10_threshold) : b.mastery_points;
 			return eb - ea;
