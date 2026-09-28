@@ -4,6 +4,7 @@ import { load } from "@tauri-apps/plugin-store";
 import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIRiotData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
 import { is_mastery_champion, is_standard_champion, format_champion_name, lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
+import { fetch_champion_positions } from "@/lib/champion_positions.ts";
 import { setLoading } from "@/lib/loading_state.ts";
 
 import "./style.css";
@@ -397,6 +398,10 @@ export default function App() {
 				statstones_map[set.itemId.toString()] = set;
 			});
 			setStaticData(prev => ({ ...prev, statstones_map }));
+		});
+
+		fetch_champion_positions().then(champion_positions => {
+			setStaticData(prev => ({ ...prev, champion_positions }));
 		});
 	}, [setStaticData]);
 

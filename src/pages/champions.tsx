@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { default_mastery_data, useStaticData } from "@/data_context.tsx";
 import { challenge_icon, SortDirection, classes, mastery_color, get_champion_region, regions, is_standard_champion } from "@/lib/utils.ts";
+import { lanes, get_champion_lanes, type Lane } from "@/lib/champion_positions.ts";
 import { ChampionMasteryIcon } from "@/components/champion_mastery_icon";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 
@@ -23,6 +24,7 @@ type ChampionTableRow = {
 	name: string;
 	id: number;
 	roles: string[];
+	lanes: Lane[];
 	region: string;
 	mastery_level: number;
 	mastery_points: number;
@@ -38,6 +40,7 @@ export default function Champions() {
 
 	// persisted state
 	const [selected_roles, set_selected_roles] = usePersistedState<string[]>('champions.selected_roles', []);
+	const [selected_lanes, set_selected_lanes] = usePersistedState<Lane[]>('champions.selected_lanes', []);
 	const [sort_field, set_sort_field] = usePersistedState<keyof ChampionTableRow>('champions.sort_field', 'mastery_level');
 	const [sort_direction, set_sort_direction] = usePersistedState<SortDirection>('champions.sort_direction', 'desc');
 	const [selected_challenges, set_selected_challenges] = usePersistedState<number[]>('champions.selected_challenges', default_tracked_challenges);
@@ -53,6 +56,7 @@ export default function Champions() {
 				name: champion.name,
 				id: parseInt(id),
 				roles: champion.roles,
+				lanes: get_champion_lanes(parseInt(id), static_data.champion_positions),
 				region: get_champion_region(parseInt(id), static_data.lcu_data) || "None",
 				mastery_level: current_mastery_data.championLevel,
 				mastery_points: current_mastery_data.championPoints,
@@ -61,7 +65,7 @@ export default function Champions() {
 				checks: default_tracked_challenges.map(x => static_data.lcu_data[x]?.completedIds?.includes(parseInt(id)) ?? false)
 			};
 		}));
-	}, [static_data.champion_map, static_data.mastery_data, static_data.lcu_data]);
+	}, [static_data.champion_map, static_data.mastery_data, static_data.lcu_data, static_data.champion_positions]);
 
 	const sorted_table_data = useMemo(() => {
 		return [...champion_table_data].sort((a, b) => {
@@ -91,6 +95,7 @@ export default function Champions() {
 	const filtered_table_data = useMemo(() => {
 		return sorted_table_data.filter(item => {
 			const roleMatch = selected_roles.length === 0 || item.roles.some(role => selected_roles.map(x => x.toLowerCase()).includes(role));
+			const laneMatch = selected_lanes.length === 0 || item.lanes.some(lane => selected_lanes.includes(lane));
 			const nameMatch = search === '' || item.name.toLowerCase().includes(search.toLowerCase());
 			const regionMatch = selected_regions.length === 0 || (item.region && selected_regions.includes(item.region));
 
@@ -107,9 +112,9 @@ export default function Champions() {
 				return true;
 			});
 
-			return roleMatch && nameMatch && regionMatch && challengeMatch;
+			return roleMatch && laneMatch && nameMatch && regionMatch && challengeMatch;
 		});
-	}, [sorted_table_data, selected_roles, selected_regions, search, challenge_filters, selected_challenges]);
+	}, [sorted_table_data, selected_roles, selected_lanes, selected_regions, search, challenge_filters, selected_challenges]);
 
 	const catch_em_all = useMemo(() => {
 		if (!has_lcu_data) {
@@ -150,6 +155,14 @@ export default function Champions() {
 						selected_items={selected_roles}
 						set_selected_items={set_selected_roles}
 						item_to_label={(item: string) => item}
+					/>
+
+					<FilterDropdown
+						title="Lanes"
+						items={[...lanes]}
+						selected_items={selected_lanes}
+						set_selected_items={set_selected_lanes}
+						item_to_label={(item: Lane) => item}
 					/>
 
 					<FilterDropdown
@@ -209,6 +222,7 @@ export default function Champions() {
 						<TableRow>
 							<TableHead>Champion</TableHead>
 							<TableHead></TableHead>
+							<TableHead>Lanes</TableHead>
 							<TableHead>Mastery</TableHead>
 							<TableHead>Region</TableHead>
 							{selected_challenges.map(x => <TableHead key={x} className="w-[40px] min-w-[40px]">
@@ -246,6 +260,11 @@ export default function Champions() {
 										{item.roles.map((role, j) => (
 											<Badge variant="outline" key={j}>{role}</Badge>
 										))}
+									</TableCell>
+									<TableCell>
+										{item.lanes.length > 0 ? item.lanes.map((lane, j) => (
+											<Badge variant="outline" key={j}>{lane}</Badge>
+										)) : <span className="text-muted-foreground text-sm">—</span>}
 									</TableCell>
 									<TableCell>
 									<div className="flex items-center gap-2">

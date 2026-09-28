@@ -12,6 +12,7 @@ export const initial_page_data: StaticData = {
 	lcu_data: {},
 	mastery_data: [],
 	champion_map: {},
+	champion_positions: {},
 	skin_map: {},
 	statstones_map: {},
 	eternals_map: new Map(),

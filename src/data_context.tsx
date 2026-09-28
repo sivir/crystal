@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAppStore } from "@/store";
+import type { ChampionPositionMap } from "@/lib/champion_positions.ts";
 
 export type page_name = "home" | "mastery" | "lobby" | "profile" | "skins" | "eternals" | "team_builder" | "settings" | "debug" | "user" | "about";
 
@@ -271,6 +272,7 @@ export interface StaticData {
 	lcu_data: APILCUChallengeMap;
 	mastery_data: APIMasteryDataEntry[];
 	champion_map: APIChampionSummaryMap;
+	champion_positions: ChampionPositionMap;
 	skin_map: APISkinMetadataMap;
 	statstones_map: StatstonesMap;
 	eternals_map: Map<number, APIEternalsData>;
