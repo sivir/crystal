@@ -1,19 +1,23 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { invoke } from "@tauri-apps/api/core";
-import { createClient } from "@supabase/supabase-js";
 import { APIChampionSummaryMap, APILCUChallenge, APILCUChallengeMap } from "@/data_context";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-const SUPABASE_URL = "https://jvnhtmgsncslprdrnkth.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2bmh0bWdzbmNzbHByZHJua3RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTQ2Mjc4ODMsImV4cCI6MjAxMDIwMzg4M30.OOjwsPjGHEc-x8MlhrOX64tJTNENqKqEq2635HKErrk";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// challenges.lol player API (replaces Supabase edge functions).
+// Overridable at build time for local API development.
+const CRYSTAL_API_BASE = import.meta.env.VITE_CRYSTAL_API_URL ?? "https://api.challenges.lol";
 
-export async function supabase_invoke<t>(function_name: string, body: any) {
-	return await supabase.functions.invoke<t>(function_name, { body: body, headers: { "x-secret": import.meta.env.VITE_SUPABASE_SECRET } });
+export async function crystal_api_get<T>(path: string): Promise<T | null> {
+	try {
+		return await invoke<T>("http_request", { url: `${CRYSTAL_API_BASE}${path}` });
+	} catch (error) {
+		console.error(`Crystal API request failed: ${path}`, error);
+		return null;
+	}
 }
 
 export const levels = ["NONE", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];

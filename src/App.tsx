@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { load } from "@tauri-apps/plugin-store";
-import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APIRegionLocale, APISummonerData, APIRiotData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
+import { APIChampionSummary, APIChampSelectSession, APIDatabaseData, APIGameflowSession, APILCUChallengeMap, StaticData, APISkinMetadataMap, APISummonerData, APIRiotData, APIStatstonesData, StatstonesMap, useStaticData, useSessionData, APIEternalsData, APIMinimalSkin, APILootData, APIMasteryDataEntry, APILobbyMember } from "@/data_context.tsx";
 import { invoke } from "@tauri-apps/api/core";
-import { is_mastery_champion, is_standard_champion, format_champion_name, lcu_get_request, supabase_invoke } from "@/lib/utils.ts";
+import { is_mastery_champion, is_standard_champion, format_champion_name, lcu_get_request, crystal_api_get } from "@/lib/utils.ts";
 import { fetch_champion_positions } from "@/lib/champion_positions.ts";
 import { setLoading } from "@/lib/loading_state.ts";
 
@@ -49,43 +49,33 @@ export function refresh_data(setStaticData: React.Dispatch<React.SetStateAction<
 					return;
 				}
 
-				const region_data = await lcu_get_request<APIRegionLocale>("/riotclient/region-locale");
-				console.log("region_data", region_data, performance.now());
-				if (region_data == null) {
-					console.error("Error refreshing riot profile data: missing region data");
-					return;
-				}
-
 				const skins_promise = lcu_get_request<APIMinimalSkin[]>(`/lol-champions/v1/inventories/${summoner_data.summonerId}/skins-minimal`).catch(error => {
 					console.error("Error refreshing minimal skins:", error);
 					return null;
 				});
 
-				const supabase_body = {
-					riot_id: `${summoner_data.gameName}#${summoner_data.tagLine}`,
-					region: region_data.region.toLowerCase()
-				};
-
-				const supabase_start = performance.now();
-				const database_data = await supabase_invoke<APIDatabaseData>("get-user", {
-					...supabase_body
-				}).catch(error => {
-					console.error("Error refreshing riot profile data:", error);
-					return null;
-				}).then(database_data => {
-					console.log(`supabase get-user (in flow) took ${(performance.now() - supabase_start).toFixed(1)}ms`);
+				// challenges.lol resolves the region server-side; no region needed.
+				const api_start = performance.now();
+				const database_data = await crystal_api_get<APIDatabaseData>(
+					`/v1/players/by-riot-id/${encodeURIComponent(summoner_data.gameName)}/${encodeURIComponent(summoner_data.tagLine)}`
+				).then(database_data => {
+					console.log(`crystal api get-player (in flow) took ${(performance.now() - api_start).toFixed(1)}ms`);
 					console.log("database_data", database_data);
 					return database_data;
 				});
 
 				let has_database_mastery = false;
 
-				if (database_data?.data) {
-					console.log("riot_data", database_data.data.riot_data);
-					setStaticData(prev => ({ ...prev, riot_data: database_data.data.riot_data }));
+				// The API returns its error object as JSON on failure, so
+				// validate the shape before trusting it.
+				if (database_data && Array.isArray(database_data.mastery_data)) {
+					console.log("riot_data", database_data.riot_data);
+					if (database_data.riot_data) {
+						setStaticData(prev => ({ ...prev, riot_data: database_data.riot_data }));
+					}
 
-					if (database_data.data.mastery_data.length > 0) {
-						setStaticData(prev => ({ ...prev, mastery_data: database_data.data.mastery_data }));
+					if (database_data.mastery_data.length > 0) {
+						setStaticData(prev => ({ ...prev, mastery_data: database_data.mastery_data }));
 						has_database_mastery = true;
 					}
 				}

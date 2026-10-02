@@ -30,11 +30,11 @@ flowchart TD
         CDRAGON["CommunityDragon CDN\n(champions, skins, statstones)"]
     end
 
-    subgraph Supabase["Supabase"]
-        EDGE["Edge Function\n(get-user)"]
-        PG["PostgreSQL\n(users table)"]
-        EDGE <--> PG
-        EDGE <--> RIOT
+    subgraph CrystalAPI["challenges.lol API"]
+        PLAYERS["Players\n(by-riot-id)"]
+        PG["PostgreSQL\n(players, scores)"]
+        PLAYERS <--> PG
+        PLAYERS <--> RIOT
     end
 
     subgraph Tauri["Tauri Desktop App"]
@@ -66,7 +66,7 @@ flowchart TD
     CMDS <-->|"Tauri IPC\n(invoke)"| APP
 
     APP -->|"invoke http_request"| CDRAGON
-    APP -->|"supabase-js\n(functions.invoke)"| EDGE
+    APP -->|"invoke http_request"| PLAYERS
     APP -->|updates| CTX_STATIC
     APP -->|updates| CTX_SESSION
     CTX_STATIC --> PAGES
